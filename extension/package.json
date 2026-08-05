@@ -1,0 +1,17 @@
+{
+  "name": "@prompt-polish/extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.7.1",
+    "@types/chrome": "^0.2.5",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}
