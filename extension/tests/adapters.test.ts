@@ -3,6 +3,7 @@
 // programmatic text change, so these assert on the dispatched event sequence.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatgptAdapter } from '../src/content/sites/chatgpt';
+import { claudeAdapter } from '../src/content/sites/claude';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -129,5 +130,75 @@ describe('chatgpt adapter — setText on the legacy textarea', () => {
     // A delegated listener reading target.value during the event sees the new text.
     expect(seen).toEqual(['improved prompt']);
     expect(onChange).toHaveBeenCalledOnce();
+  });
+});
+
+const CLAUDE_COMPOSER =
+  '<div aria-label="Write your prompt to Claude" contenteditable="true" class="ProseMirror">';
+
+describe('claude adapter — findInputElement', () => {
+  it('finds the composer by aria-label', () => {
+    document.body.innerHTML = `${CLAUDE_COMPOSER}<p></p></div>`;
+    const el = claudeAdapter.findInputElement();
+    expect(el).not.toBeNull();
+    expect(el!.getAttribute('aria-label')).toBe('Write your prompt to Claude');
+  });
+
+  it('falls back to the LAST ProseMirror instance (main composer renders below edit boxes)', () => {
+    document.body.innerHTML =
+      '<div contenteditable="true" class="ProseMirror" id="edit-box"><p>old message</p></div>' +
+      '<div contenteditable="true" class="ProseMirror" id="composer"><p></p></div>';
+    const el = claudeAdapter.findInputElement();
+    expect(el!.id).toBe('composer');
+  });
+
+  it('returns null when no composer exists', () => {
+    expect(claudeAdapter.findInputElement()).toBeNull();
+  });
+});
+
+describe('claude adapter — getText/setText', () => {
+  it('reads the Tiptap empty-placeholder state as empty text', () => {
+    document.body.innerHTML = `${CLAUDE_COMPOSER}<p data-placeholder="How can Claude help?" class="is-empty is-editor-empty"><br></p></div>`;
+    const el = claudeAdapter.findInputElement()!;
+    expect(claudeAdapter.getText(el)).toBe('');
+  });
+
+  it('joins one paragraph per line', () => {
+    document.body.innerHTML = `${CLAUDE_COMPOSER}<p>alpha</p><p>beta</p></div>`;
+    const el = claudeAdapter.findInputElement()!;
+    expect(claudeAdapter.getText(el)).toBe('alpha\nbeta');
+  });
+
+  it('setText replaces the text and dispatches a bubbling insertText InputEvent', () => {
+    document.body.innerHTML = `<div id="react-root">${CLAUDE_COMPOSER}<p>old</p></div></div>`;
+    const el = claudeAdapter.findInputElement()!;
+    const onInput = vi.fn();
+    document.getElementById('react-root')!.addEventListener('input', onInput);
+
+    claudeAdapter.setText(el, 'better\nprompt');
+
+    expect(claudeAdapter.getText(el)).toBe('better\nprompt');
+    expect(el.querySelectorAll('p')).toHaveLength(2);
+    expect(onInput).toHaveBeenCalledOnce();
+    const event = onInput.mock.calls[0]![0] as InputEvent;
+    expect(event.bubbles).toBe(true);
+    expect(event.inputType).toBe('insertText');
+    expect(event.target).toBe(el);
+  });
+
+  it('setText prefers execCommand("insertText") when available', () => {
+    document.body.innerHTML = `${CLAUDE_COMPOSER}<p>old</p></div>`;
+    const el = claudeAdapter.findInputElement()!;
+    const execCommand = vi.fn(() => true);
+    (document as Document & { execCommand: typeof execCommand }).execCommand =
+      execCommand;
+    try {
+      claudeAdapter.setText(el, 'via execCommand');
+      expect(execCommand).toHaveBeenCalledWith('insertText', false, 'via execCommand');
+      expect(el.querySelector('p')!.textContent).toBe('old');
+    } finally {
+      delete (document as Partial<Document>).execCommand;
+    }
   });
 });

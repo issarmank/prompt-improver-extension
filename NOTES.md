@@ -59,7 +59,34 @@ live site when loading the extension — OpenAI ships composer changes often)._
 
 ## claude.ai
 
-_(nothing yet)_
+_Researched 2026-08-05 (from documented DOM structure; re-verify live —
+Anthropic redesigns the composer periodically)._
+
+### Prompt input element
+
+- The composer is a **Tiptap/ProseMirror contenteditable**:
+  `div[contenteditable="true"]` with class `ProseMirror`, carrying
+  `aria-label="Write your prompt to Claude"`. There is no stable id.
+- Selector strategy (in order):
+  1. `div[aria-label="Write your prompt to Claude"][contenteditable="true"]`
+  2. fallback `div.ProseMirror[contenteditable="true"]` — but note that
+     **editing a previous message spawns additional ProseMirror instances**
+     mid-conversation, so the aria-label selector is strongly preferred and
+     the fallback takes the *last* match (the main composer is rendered
+     after/below the message list).
+- Content: one `<p>` per line. Empty state: a single
+  `<p data-placeholder="…" class="is-empty is-editor-empty"><br></p>` —
+  `textContent` is `''`, same read logic as chatgpt.
+- Send button: `button[aria-label="Send message"]` — never touched.
+
+### Programmatic text changes
+
+- Same as chatgpt.com's contenteditable path (it's the same editor family):
+  direct textContent writes update the DOM but not ProseMirror's document,
+  leaving the send button disabled. select-all +
+  `document.execCommand('insertText')` works; fallback rebuild `<p>` lines +
+  bubbling `InputEvent(inputType: 'insertText')`.
+- Shared implementation lives in `sites/contenteditable.ts`.
 
 ## gemini.google.com
 
