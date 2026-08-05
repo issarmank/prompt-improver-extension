@@ -1,10 +1,22 @@
 // Calls OpenRouter's chat completions API to rewrite a prompt.
 // The API key is read from env at call time and must never appear in logs,
 // error messages, or responses.
+import { Agent, setGlobalDispatcher } from 'undici';
+
+// Improve clicks are sporadic, and undici's default agent drops idle
+// connections after ~4s — so nearly every click would pay a fresh
+// TCP+TLS handshake to OpenRouter before any tokens flow. Hold idle
+// connections for 60s so back-to-back clicks reuse the socket.
+setGlobalDispatcher(
+  new Agent({ keepAliveTimeout: 60_000, keepAliveMaxTimeout: 600_000 }),
+);
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const MODEL = 'deepseek/deepseek-v4-flash-0731';
+const MODEL = 'openai/gpt-4o-mini';
 const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 8000);
+// A rewritten prompt shouldn't run far longer than the original; this bounds
+// worst-case generation time instead of letting the model ramble unchecked.
+const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS ?? 1024);
 
 const SYSTEM_INSTRUCTION = [
   'You rewrite prompts that users are about to send to an AI assistant.',
@@ -40,6 +52,22 @@ interface ChatCompletionResponse {
   choices?: { message?: { content?: unknown } }[];
 }
 
+/**
+ * Best-effort: open a TLS connection to OpenRouter at server start so the
+ * first Improve click doesn't pay the handshake. The kept-alive socket is
+ * reused by the next rewrite call. Never throws.
+ */
+export async function warmUpConnection(): Promise<void> {
+  try {
+    await fetch('https://openrouter.ai/api/v1/models', {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch {
+    // Warmup is an optimization only — a real call will connect on demand.
+  }
+}
+
 export async function rewritePrompt(text: string): Promise<RewriteResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -56,6 +84,10 @@ export async function rewritePrompt(text: string): Promise<RewriteResult> {
       },
       body: JSON.stringify({
         model: MODEL,
+        max_tokens: MAX_TOKENS,
+        // Route to the fastest provider for this model instead of OpenRouter's
+        // default price-balanced routing.
+        provider: { sort: 'throughput' },
         messages: [
           { role: 'system', content: SYSTEM_INSTRUCTION },
           { role: 'user', content: text },
@@ -85,7 +117,10 @@ export async function rewritePrompt(text: string): Promise<RewriteResult> {
   try {
     const data = (await response.json()) as ChatCompletionResponse;
     content = data.choices?.[0]?.message?.content;
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'TimeoutError') {
+      throw new LlmError('timeout', `OpenRouter request exceeded ${TIMEOUT_MS}ms`);
+    }
     throw new LlmError('upstream_error', 'OpenRouter returned invalid JSON');
   }
 

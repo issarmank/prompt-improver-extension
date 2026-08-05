@@ -43,7 +43,8 @@ describe('rewritePrompt', () => {
     );
 
     const body = JSON.parse(init!.body as string);
-    expect(body.model).toBe('deepseek/deepseek-v4-flash-0731');
+    expect(body.model).toBe('openai/gpt-4o-mini');
+    expect(body.provider).toEqual({ sort: 'throughput' });
     expect(body.messages).toHaveLength(2);
     expect(body.messages[0].role).toBe('system');
     expect(body.messages[0].content).toMatch(/rewrite/i);
