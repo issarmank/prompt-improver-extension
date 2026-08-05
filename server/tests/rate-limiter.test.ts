@@ -1,8 +1,22 @@
 // Runs against a real local Redis: `docker compose up -d` in server/ first.
 import type { Redis } from 'ioredis';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { createApp } from '../src/index.js';
+
+// These tests exercise the rate limiter, not OpenRouter — echo the prompt back.
+vi.mock('../src/lib/llm.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/llm.js')>()),
+  rewritePrompt: vi.fn(async (text: string) => ({ improved: text.trim() })),
+}));
 import {
   RATE_LIMIT_POINTS,
   consume,

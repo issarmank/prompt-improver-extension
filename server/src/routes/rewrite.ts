@@ -1,11 +1,26 @@
 // POST /rewrite endpoint.
 import { Router } from 'express';
 import type { RateLimiterRedis } from 'rate-limiter-flexible';
-import { rewritePrompt } from '../lib/llm.js';
+import { LlmError, rewritePrompt } from '../lib/llm.js';
 import { consume } from '../lib/rate-limiter.js';
 import { requireInstallId } from '../middleware/auth.js';
 
 const MAX_PROMPT_LENGTH = 8000;
+
+// Distinct from the rate limiter's 429: upstream failures surface as 5xx so
+// the extension can tell "slow down" apart from "the rewrite service broke".
+function mapLlmError(kind: LlmError['kind']): { status: number; error: string } {
+  switch (kind) {
+    case 'timeout':
+      return { status: 504, error: 'llm_timeout' };
+    case 'upstream_rate_limited':
+      return { status: 502, error: 'llm_rate_limited' };
+    case 'not_configured':
+      return { status: 503, error: 'llm_not_configured' };
+    default:
+      return { status: 502, error: 'llm_error' };
+  }
+}
 
 export function createRewriteRouter(limiter: RateLimiterRedis): Router {
   const router = Router();
@@ -44,6 +59,13 @@ export function createRewriteRouter(limiter: RateLimiterRedis): Router {
       const { improved } = await rewritePrompt(text);
       res.json({ improved, remaining: result.remaining });
     } catch (err) {
+      if (err instanceof LlmError) {
+        // LlmError messages are written by us and never contain the API key.
+        console.error(`rewrite upstream failure (${err.kind}): ${err.message}`);
+        const { status, error } = mapLlmError(err.kind);
+        res.status(status).json({ error, message: err.message });
+        return;
+      }
       console.error('rewrite failed:', err);
       res.status(500).json({
         error: 'internal_error',
