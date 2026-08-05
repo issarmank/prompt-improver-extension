@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatgptAdapter } from '../src/content/sites/chatgpt';
 import { claudeAdapter } from '../src/content/sites/claude';
+import { geminiAdapter } from '../src/content/sites/gemini';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -195,6 +196,73 @@ describe('claude adapter — getText/setText', () => {
       execCommand;
     try {
       claudeAdapter.setText(el, 'via execCommand');
+      expect(execCommand).toHaveBeenCalledWith('insertText', false, 'via execCommand');
+      expect(el.querySelector('p')!.textContent).toBe('old');
+    } finally {
+      delete (document as Partial<Document>).execCommand;
+    }
+  });
+});
+
+describe('gemini adapter — findInputElement', () => {
+  it('finds the Quill editor inside rich-textarea', () => {
+    document.body.innerHTML =
+      '<rich-textarea><div class="ql-editor textarea" contenteditable="true" role="textbox" aria-label="Enter a prompt here"><p><br></p></div></rich-textarea>';
+    const el = geminiAdapter.findInputElement();
+    expect(el).not.toBeNull();
+    expect(el!.classList.contains('ql-editor')).toBe(true);
+  });
+
+  it('falls back to a bare ql-editor when rich-textarea is absent', () => {
+    document.body.innerHTML =
+      '<div class="ql-editor" contenteditable="true" id="bare"><p></p></div>';
+    expect(geminiAdapter.findInputElement()!.id).toBe('bare');
+  });
+
+  it('returns null when no editor exists', () => {
+    expect(geminiAdapter.findInputElement()).toBeNull();
+  });
+});
+
+describe('gemini adapter — getText/setText', () => {
+  function mountEditor(inner: string): HTMLElement {
+    document.body.innerHTML = `<div id="app-root"><rich-textarea><div class="ql-editor ql-blank" contenteditable="true">${inner}</div></rich-textarea></div>`;
+    return geminiAdapter.findInputElement()!;
+  }
+
+  it('reads the Quill empty state (<p><br></p>) as empty text', () => {
+    const el = mountEditor('<p><br></p>');
+    expect(geminiAdapter.getText(el)).toBe('');
+  });
+
+  it('joins one paragraph per line', () => {
+    const el = mountEditor('<p>first</p><p>second</p>');
+    expect(geminiAdapter.getText(el)).toBe('first\nsecond');
+  });
+
+  it('setText replaces the text and dispatches a bubbling insertText InputEvent', () => {
+    const el = mountEditor('<p>old</p>');
+    const onInput = vi.fn();
+    document.getElementById('app-root')!.addEventListener('input', onInput);
+
+    geminiAdapter.setText(el, 'polished\nprompt');
+
+    expect(geminiAdapter.getText(el)).toBe('polished\nprompt');
+    expect(el.querySelectorAll('p')).toHaveLength(2);
+    expect(onInput).toHaveBeenCalledOnce();
+    const event = onInput.mock.calls[0]![0] as InputEvent;
+    expect(event.bubbles).toBe(true);
+    expect(event.inputType).toBe('insertText');
+    expect(event.target).toBe(el);
+  });
+
+  it('setText prefers execCommand("insertText") when available', () => {
+    const el = mountEditor('<p>old</p>');
+    const execCommand = vi.fn(() => true);
+    (document as Document & { execCommand: typeof execCommand }).execCommand =
+      execCommand;
+    try {
+      geminiAdapter.setText(el, 'via execCommand');
       expect(execCommand).toHaveBeenCalledWith('insertText', false, 'via execCommand');
       expect(el.querySelector('p')!.textContent).toBe('old');
     } finally {

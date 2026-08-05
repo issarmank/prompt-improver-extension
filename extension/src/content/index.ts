@@ -4,14 +4,15 @@
 import { requestRewrite, type RewriteErrorKind } from '../lib/messaging';
 import { chatgptAdapter } from './sites/chatgpt';
 import { claudeAdapter } from './sites/claude';
+import { geminiAdapter } from './sites/gemini';
 import type { SiteAdapter } from './sites/types';
 import { createImproveButton } from './ui/improve-button';
 import { showToast, type ToastKind } from './ui/toast';
 
-// gemini.google.com's adapter is still a stub — it mounts here once implemented.
 const ADAPTERS: Record<string, SiteAdapter> = {
   'chatgpt.com': chatgptAdapter,
   'claude.ai': claudeAdapter,
+  'gemini.google.com': geminiAdapter,
 };
 
 function toastKindFor(kind: RewriteErrorKind): ToastKind {

@@ -90,4 +90,31 @@ Anthropic redesigns the composer periodically)._
 
 ## gemini.google.com
 
-_(nothing yet)_
+_Researched 2026-08-05 (from documented DOM structure; re-verify live —
+Google ships Gemini UI changes frequently)._
+
+### Prompt input element
+
+- Gemini is an **Angular** app and the composer is a **Quill editor**
+  contenteditable: `div.ql-editor[contenteditable="true"]` with
+  `role="textbox"` and `aria-label="Enter a prompt here"`, wrapped in a
+  custom `<rich-textarea>` element.
+- Selector strategy (in order):
+  1. `rich-textarea .ql-editor[contenteditable="true"]` (most specific)
+  2. fallback `div.ql-editor[contenteditable="true"]`
+- Content: one `<p>` per line (Quill convention). Empty state: a single
+  `<p><br></p>` and the editor carries class `ql-blank` — `textContent`
+  reads `''`, same read logic as the ProseMirror sites.
+- Send button: `button[aria-label="Send message"]` (mat-icon button) —
+  never touched.
+
+### Programmatic text changes
+
+- Quill differs from ProseMirror in one helpful way: it watches its DOM with
+  a MutationObserver and syncs external DOM writes back into its document
+  model, so the paragraph-rebuild fallback is genuinely reliable here. The
+  bubbling `input` event still matters so Angular's zone/listeners notice
+  and enable the send button.
+- select-all + `document.execCommand('insertText')` also works (Quill
+  handles the native beforeinput/input sequence), so the shared
+  `sites/contenteditable.ts` implementation is used unchanged.
