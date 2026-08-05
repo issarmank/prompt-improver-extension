@@ -6,6 +6,8 @@ export default defineManifest({
   version: '0.1.0',
   description: 'Improves your prompt before you send it to a web-based LLM chat interface.',
   permissions: ['storage'],
+  // Match patterns can't name a port, so these cover the dev backend on :8787.
+  host_permissions: ['http://localhost/*', 'http://127.0.0.1/*'],
   background: {
     service_worker: 'src/background/service-worker.ts',
     type: 'module',
