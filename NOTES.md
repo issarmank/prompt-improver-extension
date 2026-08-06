@@ -181,3 +181,41 @@ re-verify live — xAI ships composer changes often._
   legacy textarea — write via the native prototype setter, then dispatch
   bubbling `input`/`change`. Shared helper extracted to
   `sites/textarea.ts`.
+
+## chat.deepseek.com
+
+_Researched 2026-08-05 from selector lists maintained by third-party
+extensions that track DeepSeek's DOM (OneClickPrompts
+`heuristics-deepseek.js` + selector defaults, MCP-SuperAssistant);
+re-verify live — DeepSeek regenerates its hashed class names on nearly
+every deploy._
+
+### Prompt input element
+
+- DeepSeek is a **React** app and the composer is a plain **`<textarea>`**,
+  not a contenteditable. Earlier builds gave it `id="chat-input"`; current
+  builds drop the id and identify it only by
+  `placeholder="Message DeepSeek"` plus hashed CSS classes (`_27c9245`,
+  `ds-scroll-area`) that **churn on every deploy** — never select by class.
+- Selector strategy (in order):
+  1. `textarea#chat-input` (older builds, most specific when present)
+  2. `textarea[placeholder="Message DeepSeek"]` (current builds)
+  3. `[class*="chat-input"] textarea` (wrapper keeps a semantic class even
+     when the textarea's own classes are hashed)
+- Placeholder text is locale-dependent (Chinese UI shows a different
+  string), so the id and wrapper fallbacks matter for non-English users.
+- Send button: a `.ds-icon-button` div-styled button near the editor footer
+  with `aria-disabled` state — **never touched**; it enables itself when
+  React state contains text.
+
+### Programmatic text changes
+
+- Standard React controlled-textarea problem, exactly the chatgpt legacy
+  path: React installs a per-element `value` property override to track
+  input, so a plain `el.value = x` assignment is swallowed. Write through
+  the **native prototype setter** and dispatch a bubbling `input` event
+  (plus `change`) so React's delegated onChange re-reads the value and
+  enables the send button. Shared implementation: `sites/textarea.ts`.
+- No contenteditable variant has been observed, but the adapter routes a
+  non-textarea match through `sites/contenteditable.ts` defensively, same
+  shape as the chatgpt adapter.

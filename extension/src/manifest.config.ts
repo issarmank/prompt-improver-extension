@@ -12,6 +12,7 @@ export default defineManifest({
     'http://localhost/*',
     'http://127.0.0.1/*',
     'https://grok.com/*',
+    'https://chat.deepseek.com/*',
   ],
   background: {
     service_worker: 'src/background/service-worker.ts',
@@ -24,6 +25,7 @@ export default defineManifest({
         'https://claude.ai/*',
         'https://gemini.google.com/*',
         'https://grok.com/*',
+        'https://chat.deepseek.com/*',
       ],
       js: ['src/content/index.ts'],
       run_at: 'document_idle',

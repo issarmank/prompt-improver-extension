@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatgptAdapter } from '../src/content/sites/chatgpt';
 import { claudeAdapter } from '../src/content/sites/claude';
+import { deepseekAdapter } from '../src/content/sites/deepseek';
 import { geminiAdapter } from '../src/content/sites/gemini';
 import { grokAdapter } from '../src/content/sites/grok';
 
@@ -378,5 +379,82 @@ describe('grok adapter — setText on the legacy textarea', () => {
     expect(trackerSet).not.toHaveBeenCalled();
     expect(seen).toEqual(['improved prompt']);
     expect(onChange).toHaveBeenCalledOnce();
+  });
+});
+
+describe('deepseek adapter — findInputElement', () => {
+  it('finds the textarea by id (older builds)', () => {
+    document.body.innerHTML = '<textarea id="chat-input"></textarea>';
+    const el = deepseekAdapter.findInputElement();
+    expect(el).not.toBeNull();
+    expect(el!.id).toBe('chat-input');
+  });
+
+  it('falls back to the placeholder selector (current builds)', () => {
+    document.body.innerHTML =
+      '<textarea placeholder="Message DeepSeek" class="_27c9245 ds-scroll-area"></textarea>';
+    const el = deepseekAdapter.findInputElement();
+    expect(el).toBeInstanceOf(HTMLTextAreaElement);
+  });
+
+  it('falls back to a textarea inside a chat-input wrapper (localized placeholder)', () => {
+    document.body.innerHTML =
+      '<div class="chat-input-panel"><textarea placeholder="给 DeepSeek 发送消息"></textarea></div>';
+    const el = deepseekAdapter.findInputElement();
+    expect(el).toBeInstanceOf(HTMLTextAreaElement);
+  });
+
+  it('returns null when no composer exists', () => {
+    expect(deepseekAdapter.findInputElement()).toBeNull();
+  });
+});
+
+describe('deepseek adapter — getText/setText', () => {
+  it('reads the textarea via .value', () => {
+    document.body.innerHTML = '<textarea id="chat-input">draft</textarea>';
+    const el = deepseekAdapter.findInputElement()!;
+    expect(deepseekAdapter.getText(el)).toBe('draft');
+  });
+
+  it('setText bypasses a React-style value override and fires bubbling input + change', () => {
+    document.body.innerHTML =
+      '<div id="react-root"><textarea id="chat-input"></textarea></div>';
+    const el = deepseekAdapter.findInputElement() as HTMLTextAreaElement;
+    const root = document.getElementById('react-root')!;
+
+    // Simulate React's per-element value tracker: an own-property override
+    // that would swallow plain `el.value = x` assignments.
+    const trackerSet = vi.fn();
+    const nativeGet = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )!.get!;
+    Object.defineProperty(el, 'value', {
+      configurable: true,
+      get: () => nativeGet.call(el) as string,
+      set: trackerSet,
+    });
+
+    const seen: string[] = [];
+    root.addEventListener('input', (e) =>
+      seen.push((e.target as HTMLTextAreaElement).value),
+    );
+    const onChange = vi.fn();
+    root.addEventListener('change', onChange);
+
+    deepseekAdapter.setText(el, 'improved prompt');
+
+    // The override was never used — the native prototype setter was.
+    expect(trackerSet).not.toHaveBeenCalled();
+    // A delegated listener reading target.value during the event sees the new text.
+    expect(seen).toEqual(['improved prompt']);
+    expect(onChange).toHaveBeenCalledOnce();
+  });
+
+  it('setText preserves newlines in the textarea value', () => {
+    document.body.innerHTML = '<textarea id="chat-input"></textarea>';
+    const el = deepseekAdapter.findInputElement() as HTMLTextAreaElement;
+    deepseekAdapter.setText(el, 'line one\nline two');
+    expect(el.value).toBe('line one\nline two');
   });
 });

@@ -5,6 +5,7 @@ import { requestRewrite, type RewriteErrorKind } from '../lib/messaging';
 import { isSiteEnabled } from '../lib/storage';
 import { chatgptAdapter } from './sites/chatgpt';
 import { claudeAdapter } from './sites/claude';
+import { deepseekAdapter } from './sites/deepseek';
 import { geminiAdapter } from './sites/gemini';
 import { grokAdapter } from './sites/grok';
 import type { SiteAdapter } from './sites/types';
@@ -16,6 +17,7 @@ const ADAPTERS: Record<string, SiteAdapter> = {
   'claude.ai': claudeAdapter,
   'gemini.google.com': geminiAdapter,
   'grok.com': grokAdapter,
+  'chat.deepseek.com': deepseekAdapter,
 };
 
 function toastKindFor(kind: RewriteErrorKind): ToastKind {

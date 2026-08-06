@@ -41,6 +41,7 @@ describe('site toggles', () => {
       claude: true,
       gemini: true,
       grok: true,
+      deepseek: true,
     });
     expect(await isSiteEnabled('claude')).toBe(true);
   });
@@ -53,6 +54,7 @@ describe('site toggles', () => {
       claude: true,
       gemini: false,
       grok: true,
+      deepseek: true,
     });
     expect(await isSiteEnabled('gemini')).toBe(false);
     expect(await isSiteEnabled('chatgpt')).toBe(true);
@@ -74,6 +76,7 @@ describe('site toggles', () => {
       claude: true, // missing key defaults on
       gemini: false, // valid value respected
       grok: true,
+      deepseek: true,
     });
   });
 
