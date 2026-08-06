@@ -1,7 +1,7 @@
 # Prompt Polish
 
 A Chrome extension (Manifest V3) that improves your prompt before you send it to a
-web-based LLM chat interface (ChatGPT, Claude, Gemini).
+web-based LLM chat interface (ChatGPT, Claude, Gemini, Groq, Deepseek).
 
 ## Repository layout
 

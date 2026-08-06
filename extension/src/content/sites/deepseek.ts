@@ -15,7 +15,7 @@ const SELECTORS = [
 
 export const deepseekAdapter: SiteAdapter = {
   siteId: 'deepseek',
-  positionButton: leftOfInput(60, 0),
+  positionButton: leftOfInput(20, -20),
 
   findInputElement(): HTMLElement | null {
     for (const selector of SELECTORS) {

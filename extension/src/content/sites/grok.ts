@@ -9,7 +9,7 @@ const LEGACY_TEXTAREA_SELECTOR = 'textarea[aria-label="Ask Grok anything"]';
 
 export const grokAdapter: SiteAdapter = {
   siteId: 'grok',
-  positionButton: leftOfInput(60, 0),
+  positionButton: leftOfInput(60, -6),
 
   findInputElement(): HTMLElement | null {
     return (
