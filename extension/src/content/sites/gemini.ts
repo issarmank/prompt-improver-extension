@@ -9,10 +9,16 @@ const FALLBACK_SELECTOR = 'div.ql-editor[contenteditable="true"]';
 // The button sits to the left of the mode picker, inside
 // `.trailing-actions-wrapper` — the grid column the composer already reserves
 // for the picker and the mic, so no layout of ours is involved.
+// The mic fallbacks carry the builds that render the row without a picker at
+// all — the wrapper is only `.with-model-picker` sometimes, but the mic group
+// is `.persistent-mic`. `.trailing-actions-wrapper` itself is not usable as a
+// landmark: its parent contains the editor, so the row climb stops dead.
 const LANDMARKS = [
   'bard-mode-switcher',
   '.model-picker-container',
   'button[aria-label*="mode picker" i]',
+  'speech-dictation-mic-button',
+  '.input-buttons-wrapper-bottom',
 ];
 
 export const geminiAdapter: SiteAdapter = {

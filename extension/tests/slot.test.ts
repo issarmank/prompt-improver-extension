@@ -53,7 +53,9 @@ function mountClaude(): void {
 
 /**
  * gemini: editor | leading-actions-wrapper | trailing-actions-wrapper, with the
- * mode picker sitting in a *column* next to its own popover.
+ * mode picker sitting in a *column* next to its own popover. The picker half is
+ * optional live (the wrapper is `.with-model-picker` only sometimes); the mic
+ * group is not (`.persistent-mic`).
  */
 function mountGemini(): void {
   document.body.innerHTML = `
@@ -69,7 +71,14 @@ function mountGemini(): void {
             <gem-popover></gem-popover>
           </div></bard-mode-switcher>
         </div>
-        <div class="input-buttons-wrapper-bottom"><button aria-label="Use microphone"></button></div>
+        <div class="input-buttons-wrapper-bottom persistent-mic" id="gemini-mic-group" style="${ROW}">
+          <speech-dictation-mic-button>
+            <div class="gem-mic-button-wrapper">
+              <button id="gemini-mic" aria-label="Dictate"></button>
+            </div>
+          </speech-dictation-mic-button>
+          <button id="gemini-send" aria-label="Send message"></button>
+        </div>
       </div>
     </div>`;
 }
@@ -158,6 +167,16 @@ describe("findButtonSlot — the button docks in the site's own action row", () 
     const host = dock(geminiAdapter);
     expect(host.parentElement!.id).toBe('gemini-row');
     expect(host.nextElementSibling!.id).toBe('gemini-model-group');
+  });
+
+  it('gemini: falls back to the mic when the build renders no mode picker', () => {
+    // Reported live from a `?is_sa=1&campaign_id=…` landing: the trailing row
+    // drops its `.with-model-picker` half, every picker landmark misses, and the
+    // button was hidden with "found the composer but not its action row".
+    mountGemini();
+    document.getElementById('gemini-model-group')!.remove();
+    const host = dock(geminiAdapter);
+    expect(controlAfter(host)!.id).toBe('gemini-mic');
   });
 
   it('grok: up against the model/speed pill, not at the far end of the row', () => {

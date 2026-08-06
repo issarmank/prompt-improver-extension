@@ -52,7 +52,7 @@ Verified live 2026-08-06 against each site's real DOM.
 |---|---|---|---|
 | chatgpt.com | `[data-testid="composer-speech-button"]`, then `aria-label*="dictation"`, then `[data-testid="send-button"]` | `div.ms-auto.flex.items-center.gap-2` | the microphone |
 | claude.ai | `[data-testid="model-selector-dropdown"]` | `div.relative.flex.items-center.w-full.gap-2` | the model picker ("Sonnet 5 Medium") |
-| gemini.google.com | `bard-mode-switcher` | `div.trailing-actions-wrapper` | the mode picker ("Flash Extended") |
+| gemini.google.com | `bard-mode-switcher`, then `speech-dictation-mic-button` | `div.trailing-actions-wrapper` | the mode picker ("Flash Extended"), or the mic when there is no picker |
 | grok.com | `button[aria-label*="Model select"]` | `div.ms-auto.shrink-0.flex.flex-row` | the model/speed pill ("Fast") |
 | chat.deepseek.com | the `[role="button"]` beside the hidden `input[type="file"]` | `div.bf38813a` (hashed) | the attach button |
 
@@ -71,6 +71,20 @@ Per-site notes:
   Its `textarea` also has **no id** in the current build, so the adapter's
   `textarea#chat-input` selector is dead and the placeholder fallback carries it.
 - **grok** exposes `aria-label="Model select"` on the pill (text "Fast").
+- **gemini's mode picker is optional.** The trailing row is
+  `div.trailing-actions-wrapper.with-model-picker`, and some builds/entry points
+  drop the `with-model-picker` half entirely — reported live from a
+  `?is_sa=1&campaign_id=skws…` landing, where every picker landmark missed and
+  the button was hidden. The mic group beside it is `.persistent-mic`, so
+  `speech-dictation-mic-button` (then `.input-buttons-wrapper-bottom`) is the
+  landmark that survives both layouts; the button lands between picker and mic
+  when both are there. Two selectors that look right and are not:
+  - `.trailing-actions-wrapper` — its parent is `div.text-input-field`, which
+    *contains the editor*, so `actionRowFrom()` breaks on the first step and
+    returns null.
+  - `button[aria-label*="Dictate" i]` — resolves to the inner
+    `div.gem-mic-button-wrapper`, docking the button inside the mic's own
+    wrapper rather than in the row.
 
 ### Styling
 
