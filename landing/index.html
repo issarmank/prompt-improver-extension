@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Polish — a better prompt, one click away</title>
+<meta name="description" content="A Chrome extension that sits next to your chat box on ChatGPT, Claude and Gemini. Type your usual half-thought, hit one button, and it comes back specific. You still hit send.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#fbfaf9;color:#17161a;font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:oklch(0.52 0.19 295);text-decoration:none}
+a:hover{color:oklch(0.42 0.19 295)}
+section,footer{scroll-margin-top:28px}
+
+/* nav: underline on hover, and on the section you're currently looking at */
+nav a[href^="#"]:not([style-hover]){position:relative;transition:color .2s ease}
+nav a[href^="#"]:not([style-hover])::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:2px;border-radius:2px;background:oklch(0.52 0.19 295);transform:scaleX(0);transform-origin:left;transition:transform .28s cubic-bezier(.2,.7,.3,1)}
+nav a[href^="#"]:not([style-hover]):hover::after,nav a[data-active]::after{transform:scaleX(1)}
+nav a[data-active]{color:#17161a!important}
+
+/* buttons/pills lift slightly, press down on click */
+a[style-hover]{transition:transform .2s cubic-bezier(.2,.7,.3,1),box-shadow .2s ease,filter .2s ease}
+a[style-hover]:hover{transform:translateY(-2px);box-shadow:0 10px 24px -10px rgba(23,22,26,.55);filter:brightness(1.08)}
+a[style-hover]:active{transform:translateY(0);box-shadow:none}
+
+/* elements enter as they scroll into view (data-reveal is applied by the script below) */
+[data-reveal]{opacity:0;transform:translateY(20px);transition:opacity .65s cubic-bezier(.2,.7,.3,1) var(--d,0ms),transform .65s cubic-bezier(.2,.7,.3,1) var(--d,0ms)}
+[data-reveal].pp-in{opacity:1;transform:none}
+[data-lift].pp-in{transition:transform .25s cubic-bezier(.2,.7,.3,1),box-shadow .25s ease}
+[data-lift].pp-in:hover{transform:translateY(-5px);box-shadow:0 18px 38px -22px rgba(23,22,26,.5)}
+
+/* hero doesn't wait for a scroll — it rises on load */
+nav,section:first-of-type>div{animation:pp-rise .7s cubic-bezier(.2,.7,.3,1) both}
+section:first-of-type>div:nth-child(2){animation-delay:.14s}
+
+@keyframes pp-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes pp-type{0%,4%{width:0}26%,100%{width:100%}}
+@keyframes pp-caret{0%,45%{opacity:1}46%,100%{opacity:0}}
+@keyframes pp-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes pp-btn{0%,30%{background:#1c1b1f;color:#fff}34%,50%{background:oklch(0.52 0.19 295);color:#fff}54%,100%{background:#1c1b1f;color:#fff}}
+@keyframes pp-idle{0%,30%{opacity:1}33%,55%{opacity:0}58%,100%{opacity:1}}
+@keyframes pp-load{0%,31%{opacity:0}35%,52%{opacity:1}56%,100%{opacity:0}}
+@keyframes pp-before{0%,52%{opacity:1}58%,94%{opacity:0}99%,100%{opacity:1}}
+@keyframes pp-after{0%,53%{opacity:0;transform:translateY(6px)}59%,93%{opacity:1;transform:none}98%,100%{opacity:0;transform:translateY(6px)}}
+@keyframes pp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pp-sheen{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none!important;transition:none!important}
+  [data-reveal]{opacity:1!important;transform:none!important}
+}
+</style>
+</head>
+<body>
+
+<div style="max-width:1180px;margin:0 auto;padding:0 clamp(18px,4vw,32px)">
+
+<nav style="display:flex;align-items:center;gap:clamp(16px,3vw,40px);padding:22px 0;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:9px;margin-right:auto">
+    <div style="width:26px;height:26px;border-radius:8px;background:oklch(0.52 0.19 295);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">✦</div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:17px;letter-spacing:-0.01em">Prompt Polish</span>
+  </div>
+  <a href="#how" style="font-size:14px;color:#5c5962">How it works</a>
+  <a href="#demo" style="font-size:14px;color:#5c5962">Demo</a>
+  <a href="#sites" style="font-size:14px;color:#5c5962">Supported sites</a>
+  <a href="#faq" style="font-size:14px;color:#5c5962">FAQ</a>
+  <a href="#cta" style="font-size:14px;font-weight:500;padding:9px 16px;border-radius:999px;background:#1c1b1f;color:#fff" style-hover="background:#000">Add to Chrome</a>
+</nav>
+
+<section style="display:flex;gap:clamp(24px,5vw,56px);flex-wrap:wrap;align-items:center;padding:clamp(28px,6vw,64px) 0 clamp(40px,7vw,80px)">
+  <div style="flex:1 1 380px;min-width:300px">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 6px;border-radius:999px;background:oklch(0.95 0.035 295);color:oklch(0.42 0.15 295);font-size:12.5px;font-weight:500;margin-bottom:22px">
+      <span style="padding:2px 7px;border-radius:999px;background:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px">v0.1</span>
+      Free while in beta
+    </div>
+    <h1 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(38px,5.4vw,62px);line-height:1.03;letter-spacing:-0.035em;font-weight:600;margin:0 0 20px;text-wrap:balance">
+      Your prompt, but it<br>actually <span style="color:oklch(0.52 0.19 295)">knows what it wants</span>
+    </h1>
+    <p style="font-size:16.5px;line-height:1.6;color:#5c5962;max-width:460px;margin:0 0 30px;text-wrap:pretty">
+      Prompt Polish sits quietly next to your chat box on ChatGPT, Claude and Gemini. Type your usual half-thought, hit one button, and it comes back specific. You still hit send.
+    </p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <a href="#cta" style="display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free</a>
+      <a href="#demo" style="font-size:14.5px;color:#5c5962;padding:13px 4px" style-hover="color:#17161a">See it in action →</a>
+    </div>
+    <p style="font-size:12.5px;color:#8b8891;margin:18px 0 0;font-family:'IBM Plex Mono',monospace">Manifest V3 · no account · never auto-sends</p>
+  </div>
+
+  <div style="flex:1 1 420px;min-width:300px;position:relative">
+    <div style="position:absolute;inset:-10% -6%;background:radial-gradient(60% 60% at 70% 30%,oklch(0.9 0.06 295/.7),transparent 70%);filter:blur(30px);pointer-events:none"></div>
+    <div style="position:relative;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 24px 60px -24px rgba(23,22,26,.28),0 2px 6px rgba(23,22,26,.05);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid rgba(0,0,0,.06);background:#faf9f8">
+        <div style="display:flex;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#e5e3e0;display:block"></span><span style="width:9px;height:9px;border-radius:50%;background:#e5e3e0;display:block"></span><span style="width:9px;height:9px;border-radius:50%;background:#e5e3e0;display:block"></span></div>
+        <div style="flex:1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9b98a1">chatgpt.com</div>
+      </div>
+      <div style="padding:22px 20px 26px;min-height:290px;display:flex;flex-direction:column;justify-content:flex-end;gap:16px">
+        <div style="position:relative;min-height:104px">
+          <div style="animation:pp-before 14s ease-in-out infinite">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:#a5a2ab;margin-bottom:8px">YOUR PROMPT</div>
+            <div style="font-size:14.5px;line-height:1.55;color:#3a3840;overflow:hidden;white-space:nowrap;animation:pp-type 14s steps(46,end) infinite">write something about my startup for the website<span style="display:inline-block;width:1.5px;height:15px;background:oklch(0.52 0.19 295);vertical-align:-2px;margin-left:2px;animation:pp-caret 1s steps(1) infinite"></span></div>
+          </div>
+          <div style="position:absolute;inset:0;animation:pp-after 14s ease-in-out infinite">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:oklch(0.55 0.14 295);margin-bottom:8px">POLISHED ✦</div>
+            <div style="font-size:14.5px;line-height:1.55;color:#17161a;text-wrap:pretty">Write a 90-word homepage hero for a two-person B2B startup. Lead with the problem, name the buyer, avoid buzzwords, end with one clear CTA.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 12px 12px 16px;border:1px solid rgba(0,0,0,.1);border-radius:14px;background:#fdfdfc">
+          <span style="flex:1;font-size:13.5px;color:#b5b2bb">Message ChatGPT…</span>
+          <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1.4;padding:6px 13px;border-radius:999px;border:1px solid rgba(120,120,128,.35);box-shadow:0 1px 4px rgba(0,0,0,.25);white-space:nowrap;animation:pp-btn 14s ease-in-out infinite;overflow:hidden">
+            <span style="animation:pp-idle 14s steps(1) infinite">✨ Improve My Prompt</span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:pp-load 14s steps(1) infinite">… Improving</span>
+          </div>
+          <span style="width:30px;height:30px;border-radius:50%;background:#1c1b1f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">↑</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sites" style="padding:clamp(24px,4vw,44px) 0;border-top:1px solid rgba(0,0,0,.07);border-bottom:1px solid rgba(0,0,0,.07)">
+  <div style="display:flex;gap:clamp(20px,4vw,56px);align-items:center;flex-wrap:wrap;justify-content:space-between">
+    <p style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.08em;color:#8b8891;text-transform:uppercase">Works on</p>
+    <div style="display:flex;gap:clamp(18px,3.5vw,48px);align-items:center;flex-wrap:wrap">
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:500;color:#2e2c33">ChatGPT</span>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:500;color:#2e2c33">Claude</span>
+      <span style="font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:500;color:#2e2c33">Gemini</span>
+      <span style="font-size:13px;color:#9b98a1;padding:5px 11px;border:1px dashed rgba(0,0,0,.18);border-radius:999px">+ your favourite, next</span>
+    </div>
+  </div>
+</section>
+
+<section id="demo" style="padding:clamp(48px,8vw,96px) 0">
+  <div style="display:flex;gap:clamp(24px,5vw,60px);flex-wrap:wrap;align-items:flex-start;margin-bottom:34px">
+    <div style="flex:1 1 340px">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.6vw,40px);line-height:1.1;letter-spacing:-0.03em;font-weight:600;margin:0 0 14px;text-wrap:balance">Same idea. Fewer follow-up messages.</h2>
+      <p style="font-size:15.5px;line-height:1.6;color:#5c5962;margin:0;max-width:440px;text-wrap:pretty">You know what you meant. The model doesn't. Polish fills in the format, the audience and the constraints you were going to explain three messages later.</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+    <div style="border:1px solid rgba(0,0,0,.09);border-radius:14px;background:#fff;padding:22px 22px 24px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.07em;color:#a5a2ab">BEFORE</span><span style="flex:1;height:1px;background:rgba(0,0,0,.07)"></span></div>
+      <p style="font-size:15px;line-height:1.6;color:#6b6870;margin:0 0 20px;font-style:italic">"help me write an email to my landlord about the heating"</p>
+      <p style="font-size:15px;line-height:1.6;color:#6b6870;margin:0 0 20px;font-style:italic">"explain this code"</p>
+      <p style="font-size:15px;line-height:1.6;color:#6b6870;margin:0;font-style:italic">"give me some dinner ideas"</p>
+    </div>
+    <div style="border:1px solid oklch(0.85 0.06 295);border-radius:14px;background:linear-gradient(180deg,oklch(0.985 0.012 295),#fff 60%);padding:22px 22px 24px;box-shadow:0 12px 32px -18px oklch(0.52 0.19 295/.5)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.07em;color:oklch(0.52 0.19 295)">AFTER ✦</span><span style="flex:1;height:1px;background:oklch(0.88 0.05 295)"></span></div>
+      <p style="font-size:15px;line-height:1.6;color:#26242b;margin:0 0 20px">Draft a firm but polite 150-word email to my landlord: heating has been out for 6 days, two prior texts unanswered. Ask for a repair date in writing within 48 hours.</p>
+      <p style="font-size:15px;line-height:1.6;color:#26242b;margin:0 0 20px">Explain this function to a junior dev: what it does, why the fallback exists, and one edge case that would break it.</p>
+      <p style="font-size:15px;line-height:1.6;color:#26242b;margin:0">Five weeknight dinners, 30 minutes max, no dairy, using things I likely already have. One line each, no preamble.</p>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding:clamp(48px,8vw,96px) 0;border-top:1px solid rgba(0,0,0,.07)">
+  <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.6vw,40px);line-height:1.1;letter-spacing:-0.03em;font-weight:600;margin:0 0 12px">Three steps, one of which is "type"</h2>
+  <p style="font-size:15.5px;color:#5c5962;margin:0 0 40px;max-width:480px">No settings to learn. No account. The button shows up on its own.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(16px,2.5vw,28px)">
+    <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px 22px 26px">
+      <div style="width:30px;height:30px;border-radius:9px;background:oklch(0.95 0.035 295);color:oklch(0.45 0.17 295);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-bottom:18px">01</div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0 0 9px">Write it badly</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">Type the half-formed version you were going to send anyway. Genuinely, don't try.</p>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px 22px 26px">
+      <div style="width:30px;height:30px;border-radius:9px;background:oklch(0.95 0.035 295);color:oklch(0.45 0.17 295);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-bottom:18px">02</div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0 0 9px">Hit ✨ Improve</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">The pill sits beside the composer and follows it as the box grows. Takes about a second.</p>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px 22px 26px">
+      <div style="width:30px;height:30px;border-radius:9px;background:oklch(0.95 0.035 295);color:oklch(0.45 0.17 295);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-bottom:18px">03</div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;letter-spacing:-0.015em;margin:0 0 9px">Edit, then send</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">The rewrite lands in your box — yours to change. Polish never presses send for you.</p>
+    </div>
+  </div>
+</section>
+
+<section style="padding:clamp(40px,6vw,72px) 0;border-top:1px solid rgba(0,0,0,.07)">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:clamp(18px,3vw,36px)">
+    <div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Nothing to configure</h3>
+      <p style="font-size:14px;line-height:1.6;color:#6b6870;margin:0">No API key, no sign-up. Install and the button is there next time you open a chat.</p>
+    </div>
+    <div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Only your prompt leaves</h3>
+      <p style="font-size:14px;line-height:1.6;color:#6b6870;margin:0">Just the text you typed goes out for the rewrite. No page contents, no chat history.</p>
+    </div>
+    <div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Hands off your chat</h3>
+      <p style="font-size:14px;line-height:1.6;color:#6b6870;margin:0">Polish reads and writes one text field. It never touches the site's send button.</p>
+    </div>
+    <div>
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Fails out loud</h3>
+      <p style="font-size:14px;line-height:1.6;color:#6b6870;margin:0">Slow model or a hit rate limit? You get a toast that says so, not silence.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" style="padding:clamp(48px,8vw,90px) 0;border-top:1px solid rgba(0,0,0,.07);display:flex;gap:clamp(24px,5vw,72px);flex-wrap:wrap">
+  <div style="flex:0 1 300px">
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.6vw,40px);line-height:1.1;letter-spacing:-0.03em;font-weight:600;margin:0 0 12px">Fair questions</h2>
+    <p style="font-size:14.5px;color:#6b6870;margin:0">Something missing? <a href="#cta">Ask us</a>.</p>
+  </div>
+  <div style="flex:1 1 380px;display:flex;flex-direction:column">
+    <div style="padding:20px 0;border-top:1px solid rgba(0,0,0,.09)">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Will it send my message by accident?</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">No. Polish only replaces the text in the box. Pressing send is always your move.</p>
+    </div>
+    <div style="padding:20px 0;border-top:1px solid rgba(0,0,0,.09)">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Do I need my own API key?</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">Not during the beta — rewrites run through our backend with a generous per-install limit.</p>
+    </div>
+    <div style="padding:20px 0;border-top:1px solid rgba(0,0,0,.09)">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">What if a site changes its layout?</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">Each site has its own small adapter, so a fix ships for that site alone. The button re-finds the composer when the page re-renders.</p>
+    </div>
+    <div style="padding:20px 0;border-top:1px solid rgba(0,0,0,.09)">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Can I get my old prompt back?</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">Undo in the chat box works normally — the rewrite is a regular edit.</p>
+    </div>
+    <div style="padding:20px 0;border-top:1px solid rgba(0,0,0,.09);border-bottom:1px solid rgba(0,0,0,.09)">
+      <h3 style="font-family:'Space Grotesk',sans-serif;font-size:16.5px;font-weight:600;margin:0 0 8px">Firefox? Safari?</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:#6b6870;margin:0">Chrome first. If enough people ask nicely, others follow.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cta" style="margin:0 0 clamp(40px,6vw,72px);border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(120deg,oklch(0.97 0.02 295),oklch(0.93 0.05 300) 55%,oklch(0.95 0.035 270));padding:clamp(38px,6vw,66px) clamp(24px,5vw,56px)">
+  <div style="position:absolute;right:-60px;bottom:-120px;width:340px;height:340px;border-radius:50%;border:36px solid rgba(255,255,255,.55);animation:pp-float 7s ease-in-out infinite;pointer-events:none"></div>
+  <div style="position:relative;max-width:520px">
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.8vw,42px);line-height:1.08;letter-spacing:-0.03em;font-weight:600;margin:0 0 14px;text-wrap:balance">One button. Roughly a thousand better answers.</h2>
+    <p style="font-size:15.5px;line-height:1.6;color:#464350;margin:0 0 28px">Free while Prompt Polish is in beta. Install takes about eight seconds, most of which is Chrome asking if you're sure.</p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <a href="#cta" style="position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:9px;padding:14px 24px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free
+        <span style="position:absolute;top:0;bottom:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:pp-sheen 3.4s ease-in-out infinite"></span>
+      </a>
+      <span style="font-size:13px;color:#5c5962;font-family:'IBM Plex Mono',monospace">Chrome 114+ · 68 KB</span>
+    </div>
+  </div>
+</section>
+
+<footer style="padding:34px 0 44px;border-top:1px solid rgba(0,0,0,.08);display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+  <div style="display:flex;align-items:center;gap:9px;margin-right:auto">
+    <div style="width:22px;height:22px;border-radius:7px;background:oklch(0.52 0.19 295);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">✦</div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:14.5px">Prompt Polish</span>
+  </div>
+  <div style="display:flex;gap:22px;flex-wrap:wrap">
+    <a href="#faq" style="font-size:13.5px;color:#6b6870">Privacy</a>
+    <a href="#how" style="font-size:13.5px;color:#6b6870">How it works</a>
+    <a href="#sites" style="font-size:13.5px;color:#6b6870">Supported sites</a>
+    <a href="#cta" style="font-size:13.5px;color:#6b6870">GitHub</a>
+  </div>
+  <span style="font-size:12.5px;color:#9b98a1;font-family:'IBM Plex Mono',monospace">© 2026 Prompt Polish</span>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // Tag what should animate in. Cards inside a grid stagger; everything else
+  // reveals as one block. The hero is skipped — it animates on load.
+  document.querySelectorAll('section, footer').forEach(function (sec, i) {
+    if (i === 0) return;
+    var grid = sec.querySelector(':scope > div[style*="grid-template-columns"]');
+    var items = [];
+    Array.prototype.forEach.call(sec.children, function (child) {
+      if (child === grid) items.push.apply(items, child.children);
+      else items.push(child);
+    });
+    items.forEach(function (el, n) {
+      if (el.style.animation) return; // leave the floating ring's own loop alone
+      el.setAttribute('data-reveal', '');
+      el.style.setProperty('--d', n * 70 + 'ms');
+      if (el.parentElement === grid) el.setAttribute('data-lift', '');
+    });
+  });
+
+  var reveals = document.querySelectorAll('[data-reveal]');
+  if (reduce || !('IntersectionObserver' in window)) {
+    reveals.forEach(function (el) { el.classList.add('pp-in'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('pp-in');
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.06 });
+    reveals.forEach(function (el) { io.observe(el); });
+  }
+
+  // Highlight the nav link for whichever section is under the top third.
+  var ids = ['sites', 'demo', 'how', 'faq'];
+  var links = {};
+  document.querySelectorAll('nav a[href^="#"]').forEach(function (a) {
+    links[a.getAttribute('href').slice(1)] = a;
+  });
+
+  var ticking = false;
+  function spy() {
+    ticking = false;
+    var line = window.innerHeight * 0.35, current = null;
+    ids.forEach(function (id) {
+      var s = document.getElementById(id);
+      if (s && s.getBoundingClientRect().top <= line) current = id;
+    });
+    ids.forEach(function (id) {
+      if (links[id]) links[id].toggleAttribute('data-active', id === current);
+    });
+  }
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(spy);
+  }, { passive: true });
+  spy();
+})();
+</script>
+
+</body>
+</html>
