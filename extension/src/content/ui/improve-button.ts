@@ -1,47 +1,76 @@
-// The floating "✨ Improve" button. Lives in an overlay on document.body so
-// the site's React tree can't remove it when it re-renders the composer.
-import type { PositionButton } from '../sites/types';
-import { leftOfInput } from './positioning';
+// The inline "✨ Improve" button. It is inserted as a real child of the site's
+// own composer action row, so it inherits that row's layout — no coordinate
+// math, no overlay, and it can never strand itself over an unrelated screen.
+// No shadow DOM: the whole point is to inherit the row's box and typography.
 
 export type ImproveButton = {
+  /** The host element to insert into the site's action row. */
   container: HTMLElement;
   setLoading(loading: boolean): void;
   onClick(handler: () => void): void;
-  /** Position the button using the given strategy, or the shared default if omitted. */
-  positionNear(input: HTMLElement, positionButton?: PositionButton): void;
-  hide(): void;
+  /**
+   * Copy the row's own text colour and font off a neighbouring control, so the
+   * button reads as native in either theme. `color: inherit` is not enough —
+   * on deepseek the row's inherited colour is a literal purple that no control
+   * actually renders in.
+   */
+  adoptStyleFrom(sibling: Element | null): void;
 };
 
-const IDLE_LABEL = '✨ Improve My Prompt';
+const IDLE_LABEL = '✨ Improve';
+const FULL_LABEL = 'Improve my prompt';
 const LOADING_LABEL = '… Improving';
 
-const DEFAULT_POSITION: PositionButton = leftOfInput(60, 8);
+/** Border and hover fill are derived from the adopted colour, so both themes work. */
+const BORDER_TINT = 'color-mix(in srgb, currentColor 30%, transparent)';
+const HOVER_TINT = 'color-mix(in srgb, currentColor 10%, transparent)';
 
 export function createImproveButton(): ImproveButton {
   const container = document.createElement('div');
   container.id = 'prompt-polish-improve';
+  container.setAttribute('data-prompt-polish', '');
   Object.assign(container.style, {
-    position: 'fixed',
-    zIndex: '2147483646',
-    display: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    flex: 'none',
+    margin: '0 4px',
   } satisfies Partial<CSSStyleDeclaration>);
 
   const button = document.createElement('button');
+  // The composer is a <form> on chatgpt; a default-type button would submit it.
   button.type = 'button';
   button.textContent = IDLE_LABEL;
+  button.title = FULL_LABEL;
+  button.setAttribute('aria-label', FULL_LABEL);
   Object.assign(button.style, {
-    font: '12px/1.4 system-ui, sans-serif',
+    font: 'inherit',
+    fontSize: '12px',
+    lineHeight: '1.4',
+    fontWeight: '500',
     padding: '4px 10px',
     borderRadius: '999px',
-    border: '1px solid rgba(120, 120, 128, 0.35)',
-    background: 'rgba(30, 30, 30, 0.85)',
-    color: '#fff',
+    border: `1px solid ${BORDER_TINT}`,
+    background: 'transparent',
+    color: 'inherit',
     cursor: 'pointer',
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)',
+    whiteSpace: 'nowrap',
+    flex: 'none',
   } satisfies Partial<CSSStyleDeclaration>);
   container.appendChild(button);
 
   let loading = false;
+
+  // Hover state in JS rather than a stylesheet: injecting global CSS into five
+  // different sites is a bigger surface than two listeners on our own node.
+  button.addEventListener('mouseenter', () => {
+    if (!loading) button.style.background = HOVER_TINT;
+  });
+  button.addEventListener('mouseleave', () => {
+    button.style.background = 'transparent';
+  });
+  // Clicking must not blur the editor — the caret (and any selection the site
+  // tracks) has to survive the rewrite.
+  button.addEventListener('mousedown', (e) => e.preventDefault());
 
   return {
     container,
@@ -59,15 +88,11 @@ export function createImproveButton(): ImproveButton {
         if (!loading) handler();
       });
     },
-    positionNear(input: HTMLElement, positionButton: PositionButton = DEFAULT_POSITION) {
-      container.style.display = 'block';
-      const { width, height } = container.getBoundingClientRect();
-      const { top, left } = positionButton(input, { width, height });
-      container.style.top = `${top}px`;
-      container.style.left = `${left}px`;
-    },
-    hide() {
-      container.style.display = 'none';
+    adoptStyleFrom(sibling: Element | null) {
+      if (!(sibling instanceof HTMLElement)) return;
+      const style = getComputedStyle(sibling);
+      if (style.color) button.style.color = style.color;
+      if (style.fontFamily) button.style.fontFamily = style.fontFamily;
     },
   };
 }

@@ -1,6 +1,7 @@
-// Content script entry: mounts the "✨ Improve" button next to the prompt
-// input and runs the rewrite pipeline (backend via service worker → replace
-// the input text). Never touches the site's own send button or listeners.
+// Content script entry: docks the "✨ Improve" button in the site's own
+// composer action row and runs the rewrite pipeline (backend via service
+// worker → replace the input text). Never touches the site's own send button
+// or listeners — it inserts one node and owns only that node.
 import { requestRewrite, type RewriteErrorKind } from '../lib/messaging';
 import { isSiteEnabled } from '../lib/storage';
 import { chatgptAdapter } from './sites/chatgpt';
@@ -10,6 +11,7 @@ import { geminiAdapter } from './sites/gemini';
 import { grokAdapter } from './sites/grok';
 import type { SiteAdapter } from './sites/types';
 import { createImproveButton } from './ui/improve-button';
+import { applySlot, styleSourceFor } from './ui/mount';
 import { showToast, type ToastKind } from './ui/toast';
 import { isInputInteractive } from './ui/visibility';
 
@@ -35,7 +37,7 @@ function toastKindFor(kind: RewriteErrorKind): ToastKind {
 
 function mount(adapter: SiteAdapter): void {
   const button = createImproveButton();
-  document.body.appendChild(button.container);
+  const host = button.container;
 
   /**
    * The composer the button should attach to, or null when this page has none
@@ -50,23 +52,34 @@ function mount(adapter: SiteAdapter): void {
     return input && isInputInteractive(input) ? input : null;
   };
 
-  // The composer grows and shrinks with the prompt without any DOM mutation
-  // the body observer would see (a textarea paste, a CSS height transition),
-  // so watch the resolved input's box directly too.
-  const sizeObserver = new ResizeObserver(() => scheduleReposition());
-  let observedInput: HTMLElement | null = null;
+  // Warn once rather than every tick: a site that redesigns its action row
+  // should be diagnosable from a user's console without flooding it.
+  let warnedNoSlot = false;
 
-  // The composer node is replaced on route changes, so re-resolve it on every
-  // reposition instead of holding a reference.
-  const reposition = () => {
+  /**
+   * Park the button in the action row, or take it out of the page. The site
+   * replaces the composer on route changes and re-renders it on every
+   * keystroke, so this re-resolves from scratch and is safe to call at any
+   * frequency — it only touches the DOM when the node is not already in place.
+   */
+  const ensureMounted = () => {
     const input = activeInput();
-    if (input !== observedInput) {
-      sizeObserver.disconnect();
-      if (input) sizeObserver.observe(input);
-      observedInput = input;
+    const slot = input ? adapter.findButtonSlot(input) : null;
+    if (!slot) {
+      // No fallback float: the button renders in the action row or nowhere.
+      host.remove();
+      if (input && !warnedNoSlot) {
+        warnedNoSlot = true;
+        console.warn(
+          `[Prompt Polish] Found the ${adapter.siteId} composer but not its action row — ` +
+            'the site\'s layout has probably changed. The Improve button is hidden.',
+        );
+      }
+      return;
     }
-    if (input) button.positionNear(input, adapter.positionButton);
-    else button.hide();
+    warnedNoSlot = false;
+    // Re-theming is only worth doing when we actually (re)entered a row.
+    if (applySlot(host, slot)) button.adoptStyleFrom(styleSourceFor(slot));
   };
 
   let scheduled = false;
@@ -75,7 +88,7 @@ function mount(adapter: SiteAdapter): void {
     scheduled = true;
     requestAnimationFrame(() => {
       scheduled = false;
-      reposition();
+      ensureMounted();
     });
   };
 
@@ -88,24 +101,20 @@ function mount(adapter: SiteAdapter): void {
     attributes: true,
     attributeFilter: ['aria-hidden', 'inert', 'open'],
   });
-  window.addEventListener('scroll', scheduleReposition, { passive: true });
-  window.addEventListener('resize', scheduleReposition, { passive: true });
   // Back/forward between sections; SPA pushes are caught by the tree they render.
   window.addEventListener('popstate', scheduleReposition);
   window.addEventListener('hashchange', scheduleReposition);
-  // Opening or closing an overlay moves focus, whatever it does to the DOM.
-  window.addEventListener('focusin', scheduleReposition);
-  // Safety net for overlays that show themselves with a class swap the filtered
-  // observer ignores: one rAF-throttled recheck a second, so the button can
-  // never stay stranded on a screen it doesn't belong to.
+  // Safety net for a re-render the filtered observer misses: one rAF-throttled
+  // recheck a second, so a dropped button always comes back. Scroll, resize and
+  // focus no longer matter — the row moves the button because it *is* the row.
   setInterval(scheduleReposition, 1000);
-  reposition();
+  ensureMounted();
 
   button.onClick(async () => {
     const input = activeInput();
     if (!input) {
       // The page changed under a stale button; drop it until a composer is back.
-      button.hide();
+      host.remove();
       showToast('Could not find the prompt input on this page.');
       return;
     }

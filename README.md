@@ -54,5 +54,22 @@ with no `Origin` header pass through, so `curl` works regardless.
 
 Site adapters live in `extension/src/content/sites/`. Each adapter is a small module
 implementing the `SiteAdapter` interface from `types.ts` (`findInputElement()`,
-`getText()`, `setText()`), so adding a site never touches shared logic. Log any
-selector/DOM research in `NOTES.md`.
+`findButtonSlot()`, `getText()`, `setText()`), so adding a site never touches
+shared logic. Log any selector/DOM research in `NOTES.md`.
+
+`findButtonSlot()` says where in the site's *own* composer action row — the row
+with the model picker, mic and send controls — the Improve button belongs. Most
+sites need one line:
+
+```ts
+findButtonSlot(input) {
+  return slotLeftOf(input, ['button[aria-label*="Model select" i]']);
+}
+```
+
+`slotLeftOf()` (in `sites/slot.ts`) takes landmark selectors in priority order,
+finds the first one inside the composer, climbs to the row that holds it, and
+docks the button immediately to its left. Pick a landmark that is always present
+and never a hashed class name — note that claude and gemini have no send button
+at all. Returning `null` means the button does not render on that site, which is
+the intended failure mode: it shows in the action row or nowhere.

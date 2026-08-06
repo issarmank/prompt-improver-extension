@@ -67,10 +67,13 @@ describe('isInputInteractive', () => {
     expect(isInputInteractive(composer)).toBe(false);
   });
 
-  it('rejects a composer behind an open settings modal', () => {
+  // A modal that leaves the page behind it interactive used to matter, because
+  // a floating button would sit on top of the overlay. The button now lives
+  // inside the composer, so it is covered exactly as the composer is.
+  it('accepts a composer behind a modal that does not inert the page', () => {
     const composer = buildComposer();
     openModal(false);
-    expect(isInputInteractive(composer)).toBe(false);
+    expect(isInputInteractive(composer)).toBe(true);
   });
 
   it('rejects a composer whose page was aria-hidden behind an overlay', () => {

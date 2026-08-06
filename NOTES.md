@@ -5,64 +5,122 @@ quirks, how each site reacts to programmatic text changes).
 
 ## Button placement across all sites
 
-- **The contenteditable is not the visible box.** ProseMirror (chatgpt,
-  claude) and Quill (gemini) size the editor element to the *full height of
-  its content*; an ancestor carries the `max-height` + `overflow-y: auto`
-  that caps it. So once the prompt is long enough to scroll, the editor's
-  `getBoundingClientRect()` is far taller than the composer the user sees —
-  often running off the bottom of the viewport — and its midpoint slides
-  down with every line added. Anchoring the button to that rect makes it
-  drift as you type/paste.
-- Fix: `ui/positioning.ts` → `visibleBox(input)` walks up to 8 ancestors and
-  intersects the input's rect with every one whose computed `overflow-y` is
-  not `visible`. That yields the stable visible box, which stops changing
-  once the composer hits its max height. `leftOfInput()` centers on it.
-- CSS forces both overflow axes to a non-`visible` value when either is set,
-  so testing `overflowY` alone is enough to spot a clipping ancestor.
-- Repositioning triggers: a `MutationObserver` on `document.body` catches
-  contenteditable edits, but **not** a textarea paste or a CSS height
-  transition — hence the extra `ResizeObserver` on the resolved input in
-  `content/index.ts`. Positions are rounded to whole pixels; without that,
-  subpixel rect changes make the button shimmer on every keystroke.
+_Rewritten 2026-08-06. The button used to be a `position: fixed` overlay on
+`document.body`, positioned by coordinate math. It is now a real child of each
+site's own composer action row — the row that already holds the model picker,
+mic and send controls — and it renders there or nowhere._
+
+### Why the overlay was abandoned
+
+- **The contenteditable is not the visible box.** ProseMirror (chatgpt, claude,
+  grok) and Quill (gemini) size the editor element to the *full height of its
+  content*; an ancestor carries the `max-height` + `overflow-y: auto` that caps
+  it. Once the prompt scrolls, the editor's rect is far taller than the composer
+  the user sees, and its midpoint slides down with every line added.
+- Working around that needed an ancestor-intersecting `visibleBox()`, per-site
+  gap/offset tuning, pixel rounding to stop shimmer, six reposition triggers and
+  a `ResizeObserver`. All of it is gone: a child of the row is positioned,
+  clipped, scrolled, hidden and themed by the site's own layout.
+
+### How the slot is resolved (`content/sites/slot.ts`)
+
+Never by class name — chatgpt, claude, grok and deepseek all hash or churn
+theirs on deploy. Three steps, shared by every adapter:
+
+1. `findInComposer(input, selector)` — look for a landmark control, starting at
+   the input's parent and widening one ancestor at a time (max 8). Scoping it
+   this way stops a header model picker or a modal's file input from matching.
+2. `actionRowFrom(landmark, input)` — climb to the **innermost** ancestor that
+   is a horizontal flex/grid with more than one element child, stopping before
+   any ancestor that contains the editor. Both halves of that test are load
+   bearing, and both were found by getting it wrong live:
+   - *child count*: these UIs wrap every dropdown in a single-child popover
+     anchor, which is not a row.
+   - *innermost, and direction*: grok's model pill sits in an `ms-auto` group.
+     Docking in the outer row put the button at the far *left* of the composer,
+     because `margin-left: auto` on the group swallows all the free space
+     between them. Gemini fails the mirror image: the mode picker's immediate
+     parent is a flex **column** holding the button and its popover.
+3. `directChildContaining(row, landmark)` → the `before` node. `insertBefore`
+   with a null `before` appends, which is the natural fallback.
+
+### Where the button lands on each site
+
+Verified live 2026-08-06 against each site's real DOM.
+
+| Site | Landmark | Row it docks in | Sits immediately left of |
+|---|---|---|---|
+| chatgpt.com | `[data-testid="composer-speech-button"]`, then `aria-label*="dictation"`, then `[data-testid="send-button"]` | `div.ms-auto.flex.items-center.gap-2` | the microphone |
+| claude.ai | `[data-testid="model-selector-dropdown"]` | `div.relative.flex.items-center.w-full.gap-2` | the model picker ("Sonnet 5 Medium") |
+| gemini.google.com | `bard-mode-switcher` | `div.trailing-actions-wrapper` | the mode picker ("Flash Extended") |
+| grok.com | `button[aria-label*="Model select"]` | `div.ms-auto.shrink-0.flex.flex-row` | the model/speed pill ("Fast") |
+| chat.deepseek.com | the `[role="button"]` beside the hidden `input[type="file"]` | `div.bf38813a` (hashed) | the attach button |
+
+Per-site notes:
+
+- **The send button is not a universal landmark.** claude and gemini have none
+  at all — claude's far-right control is `aria-label="Use voice mode"` with
+  `type="submit"`, and Enter sends. Anchor off the model picker instead.
+- **chatgpt** is a single grid row (leading | editor | trailing) while the
+  composer is empty, and only grows a bottom control row once there is text.
+  The button is in the trailing group either way, but in the empty state it
+  competes for width with the editor — keep the label short.
+- **deepseek** labels nothing: every control is a hashed `div[role="button"]`,
+  so any control query must include `[role="button"]`. The attach button is
+  identified by the hidden `input[type="file"]` next to it in the same group.
+  Its `textarea` also has **no id** in the current build, so the adapter's
+  `textarea#chat-input` selector is dead and the placeholder fallback carries it.
+- **grok** exposes `aria-label="Model select"` on the pill (text "Fast").
+
+### Styling
+
+`color: inherit` is **not** enough — on deepseek the row's inherited colour is
+`rgb(128, 0, 128)`, a literal purple no control renders in, while the
+neighbouring toggle is `rgb(249, 250, 251)`. At mount time the button copies the
+computed `color` and `fontFamily` off a real control in the group it is docking
+next to (`styleSourceFor` in `content/ui/mount.ts`). Border and hover fill are
+`color-mix(in srgb, currentColor …)`, so both follow the adopted colour and both
+themes work with no per-site CSS. No shadow DOM — it would cut off exactly the
+inheritance this relies on.
+
+### Staying mounted
+
+React tolerates the foreign child better than expected: on claude.ai an
+injected node survived a full composer re-render (typing a long prompt), and
+React inserted a *new* sibling around it without disturbing it — reconciliation
+keys off node references, not child indices. The re-insertion loop is still
+needed for route changes that replace the composer wholesale.
+
+`ensureMounted()` in `content/index.ts` is therefore written to be idempotent
+and callable at any frequency: it re-resolves the slot from scratch and only
+touches the DOM when the node is not already in place. It is driven by the body
+`MutationObserver`, `popstate`/`hashchange`, and a 1s interval as a safety net.
+`scroll`, `resize`, `focusin` and the `ResizeObserver` were all deleted — the
+row moves the button because it *is* the row.
 
 ## When the button must NOT show (all sites)
 
 _Added 2026-08-06 after the button was seen floating over claude.ai's settings
-screen while a chat was open behind it._
+screen while a chat was open behind it. Docking the button in the composer
+solved most of this by construction: a button inside a hidden, inerted, clipped
+or unmounted composer is hidden with it._
 
-Finding the composer is not enough to show the button — all five sites are
-SPAs that leave it in the DOM on screens where it isn't usable:
+What survives:
 
-- **Settings-as-a-modal** (chatgpt, claude, grok, deepseek). The chat stays
-  mounted and the selectors keep matching it; only an overlay sits on top, so
-  the button rendered above the modal at `z-index: 2147483646`.
-- **Settings-as-a-route with rich-text fields of its own** (claude
-  `/settings/*`). The claude adapter's fallback selector is
-  `div.ProseMirror[contenteditable="true"]` — deliberately broad, so it also
-  matches settings' own editors, and the button attaches to those.
-- **Composer left mounted but hidden** after a client-side route change.
-
-Two gates in front of `findInputElement()`, both re-evaluated on every
-reposition (`activeInput()` in `content/index.ts`):
-
-1. `ui/visibility.ts` → `isInputInteractive(input)`: element still connected,
-   no `[inert]`/`[aria-hidden="true"]` ancestor (Radix — chatgpt and claude —
-   marks the page behind an open modal this way, which is the most reliable
-   "behind an overlay" signal available), computed `display`/`visibility`
-   showing, a non-zero `visibleBox`, and no `[aria-modal="true"] , dialog[open]`
-   elsewhere in the document. A composer *inside* the open dialog still counts.
+1. `ui/visibility.ts` → `isInputInteractive(input)`: element still connected, no
+   `[inert]`/`[aria-hidden="true"]` ancestor (Radix — chatgpt and claude — marks
+   the page behind an open modal this way, which is the most reliable "behind an
+   overlay" signal available), computed `display`/`visibility` showing, and a
+   non-zero rect. The old `[aria-modal]`/`dialog[open]` scan was **dropped**: a
+   modal that leaves the page behind it interactive no longer strands the
+   button, since the button is covered exactly as the composer is.
 2. `SiteAdapter.isSupportedPage?()` — optional per-site route gate. Only claude
-   needs one today (its broad fallback selector); the exact selectors on the
-   other sites (`#prompt-textarea`, `rich-textarea .ql-editor`, …) never match
-   outside a composer, so they rely on gate 1 alone.
-
-Repositioning triggers had to grow to notice these: the body `MutationObserver`
-now also watches the `aria-hidden`/`inert`/`open` attributes (a modal can hide
-the composer without touching its subtree), plus `popstate`, `hashchange`,
-`focusin`, and a 1s interval as a safety net for overlays that show themselves
-with a class swap. History `pushState` can't be hooked — the content script
-runs in an isolated world — but the tree the new route renders fires the
-observer anyway.
+   needs one today: its fallback selector `div.ProseMirror[contenteditable]` is
+   deliberately broad and also matches settings' own rich-text editors.
+3. `findButtonSlot()` returning null. A settings editor has no composer action
+   row around it, so nothing is injected — the gate is structural, not a list of
+   URLs. When an input is found but no row resolves, the content script logs one
+   `console.warn` so a site redesign is diagnosable from a user's console.
 
 ## chatgpt.com
 
@@ -109,11 +167,13 @@ live site when loading the extension — OpenAI ships composer changes often)._
 
 ### Button placement
 
-- Mount the Improve button in a wrapper `position: relative`-independent
-  overlay appended to `document.body` and positioned near the composer's
-  bounding box, NOT inside the form — ChatGPT's React tree re-renders the
-  composer subtree frequently and removes foreign children (and inserting
-  inside the form risks affecting submit behavior).
+_Superseded 2026-08-06 — see "Button placement across all sites" above. The
+earlier note here claimed React would remove a foreign child of the composer;
+tested live, it does not (it keys off node references), so the button now docks
+in the trailing control group next to the microphone._
+
+- The composer **is** a `<form>` on this site, so the injected `<button>` must
+  carry `type="button"` — a default-type button inside it submits the prompt.
 - The composer node itself is replaced on route changes (new chat ↔
   existing chat), so re-resolve `findInputElement()` on every click and
   keep a `MutationObserver` on `document.body` to re-attach.
