@@ -2,6 +2,7 @@
 // input and runs the rewrite pipeline (backend via service worker → replace
 // the input text). Never touches the site's own send button or listeners.
 import { requestRewrite, type RewriteErrorKind } from '../lib/messaging';
+import { isSiteEnabled } from '../lib/storage';
 import { chatgptAdapter } from './sites/chatgpt';
 import { claudeAdapter } from './sites/claude';
 import { geminiAdapter } from './sites/gemini';
@@ -99,4 +100,10 @@ function mount(adapter: SiteAdapter): void {
 }
 
 const adapter = ADAPTERS[location.hostname];
-if (adapter) mount(adapter);
+if (adapter) {
+  // Respect the per-site toggle from the options page: when the site is
+  // disabled, inject nothing at all.
+  void isSiteEnabled(adapter.siteId).then((enabled) => {
+    if (enabled) mount(adapter);
+  });
+}

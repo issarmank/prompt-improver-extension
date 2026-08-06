@@ -4,10 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prompt Polish — Options</title>
+    <style>
+      body {
+        font: 14px/1.5 system-ui, sans-serif;
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 0 16px;
+        color: #1c1c1e;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      fieldset {
+        border: 1px solid #d0d0d5;
+        border-radius: 8px;
+        padding: 12px 16px;
+      }
+      legend {
+        font-weight: 600;
+        padding: 0 6px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 12px;
+        font-size: 12px;
+        color: #2e7d32;
+        min-height: 1em;
+      }
+    </style>
   </head>
   <body>
-    <h1>Prompt Polish</h1>
-    <p>Options page scaffold — settings coming soon.</p>
+    <h1>✨ Prompt Polish</h1>
+    <fieldset>
+      <legend>Enabled sites</legend>
+      <label>
+        <input type="checkbox" data-site-id="chatgpt" />
+        chatgpt.com
+      </label>
+      <label>
+        <input type="checkbox" data-site-id="claude" />
+        claude.ai
+      </label>
+      <label>
+        <input type="checkbox" data-site-id="gemini" />
+        gemini.google.com
+      </label>
+    </fieldset>
+    <p id="status" role="status"></p>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
