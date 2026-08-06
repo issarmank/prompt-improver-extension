@@ -1,0 +1,25 @@
+# Build context is the repo root (see server/Dockerfile). Everything the image
+# needs is copied explicitly, so keep the upload to ACR small and secret-free.
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+.claude
+.DS_Store
+
+# Never let a real key into the build context.
+.env
+**/.env
+*.local
+
+# Nothing outside the server workspace is built into the image.
+deploy
+extension/src
+extension/tests
+extension/public
+landing
+NOTES.md
+README.md
+CLAUDE.md

@@ -1,7 +1,10 @@
 // Client for the Prompt Polish backend (POST /rewrite).
 import type { RewriteErrorKind } from './messaging';
 
-export const DEFAULT_BACKEND_URL = 'http://localhost:8787';
+// Baked in at build time from VITE_BACKEND_URL (see extension/.env.production).
+// Falls back to the docker-compose dev server so `npm run dev` needs no setup.
+export const DEFAULT_BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8787';
 export const REWRITE_TIMEOUT_MS = 8000;
 
 const INSTALL_ID_KEY = 'installId';
