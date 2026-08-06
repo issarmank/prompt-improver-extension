@@ -1,0 +1,43 @@
+# Publishes the landing page to Azure Static Web Apps on every push to main
+# that touches landing/. The page is a single self-contained index.html —
+# no build step, no API — so Oryx's build is skipped and the folder is
+# uploaded as-is.
+#
+# Required repository secrets:
+#   AZURE_STATIC_WEB_APPS_API_TOKEN — deployment token for the Static Web App
+#     (az staticwebapp secrets list -n prompt-polish-landing -g prompt-polish-rg)
+name: deploy-landing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/**'
+      - '.github/workflows/deploy-landing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-landing
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: 'landing'
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
