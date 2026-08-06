@@ -3,6 +3,28 @@
 Log per-site selector and DOM research here (input element selectors, framework
 quirks, how each site reacts to programmatic text changes).
 
+## Button placement across all sites
+
+- **The contenteditable is not the visible box.** ProseMirror (chatgpt,
+  claude) and Quill (gemini) size the editor element to the *full height of
+  its content*; an ancestor carries the `max-height` + `overflow-y: auto`
+  that caps it. So once the prompt is long enough to scroll, the editor's
+  `getBoundingClientRect()` is far taller than the composer the user sees —
+  often running off the bottom of the viewport — and its midpoint slides
+  down with every line added. Anchoring the button to that rect makes it
+  drift as you type/paste.
+- Fix: `ui/positioning.ts` → `visibleBox(input)` walks up to 8 ancestors and
+  intersects the input's rect with every one whose computed `overflow-y` is
+  not `visible`. That yields the stable visible box, which stops changing
+  once the composer hits its max height. `leftOfInput()` centers on it.
+- CSS forces both overflow axes to a non-`visible` value when either is set,
+  so testing `overflowY` alone is enough to spot a clipping ancestor.
+- Repositioning triggers: a `MutationObserver` on `document.body` catches
+  contenteditable edits, but **not** a textarea paste or a CSS height
+  transition — hence the extra `ResizeObserver` on the resolved input in
+  `content/index.ts`. Positions are rounded to whole pixels; without that,
+  subpixel rect changes make the button shimmer on every keystroke.
+
 ## chatgpt.com
 
 _Researched 2026-08-05 (from documented DOM structure; re-verify against the

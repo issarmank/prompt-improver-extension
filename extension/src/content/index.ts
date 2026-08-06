@@ -31,11 +31,22 @@ function mount(adapter: SiteAdapter): void {
   const button = createImproveButton();
   document.body.appendChild(button.container);
 
+  // The composer grows and shrinks with the prompt without any DOM mutation
+  // the body observer would see (a textarea paste, a CSS height transition),
+  // so watch the resolved input's box directly too.
+  const sizeObserver = new ResizeObserver(() => scheduleReposition());
+  let observedInput: HTMLElement | null = null;
+
   // The composer node is replaced on route changes, so re-resolve it on every
   // reposition instead of holding a reference.
   const reposition = () => {
     const input = adapter.findInputElement();
-    if (input) button.positionNear(input);
+    if (input !== observedInput) {
+      sizeObserver.disconnect();
+      if (input) sizeObserver.observe(input);
+      observedInput = input;
+    }
+    if (input) button.positionNear(input, adapter.positionButton);
     else button.hide();
   };
 
