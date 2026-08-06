@@ -1,18 +1,21 @@
-// Site adapter for chatgpt.com. See NOTES.md ("chatgpt.com") for the DOM
-// research behind these selectors and event tricks.
+// Site adapter for grok.com. See NOTES.md ("grok.com") for the DOM research.
 import { readParagraphText, setContentEditableText } from './contenteditable';
 import { setTextareaText } from './textarea';
 import type { SiteAdapter } from './types';
 import { leftOfInput } from '../ui/positioning';
 
-const INPUT_SELECTOR = '#prompt-textarea';
+const TIPTAP_SELECTOR = 'div.tiptap.ProseMirror[contenteditable="true"]';
+const LEGACY_TEXTAREA_SELECTOR = 'textarea[aria-label="Ask Grok anything"]';
 
-export const chatgptAdapter: SiteAdapter = {
-  siteId: 'chatgpt',
-  positionButton: leftOfInput(60, 8),
+export const grokAdapter: SiteAdapter = {
+  siteId: 'grok',
+  positionButton: leftOfInput(60, 0),
 
   findInputElement(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(INPUT_SELECTOR);
+    return (
+      document.querySelector<HTMLElement>(TIPTAP_SELECTOR) ??
+      document.querySelector<HTMLElement>(LEGACY_TEXTAREA_SELECTOR)
+    );
   },
 
   getText(el: HTMLElement): string {

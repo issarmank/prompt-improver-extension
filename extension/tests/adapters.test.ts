@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatgptAdapter } from '../src/content/sites/chatgpt';
 import { claudeAdapter } from '../src/content/sites/claude';
 import { geminiAdapter } from '../src/content/sites/gemini';
+import { grokAdapter } from '../src/content/sites/grok';
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -268,5 +269,114 @@ describe('gemini adapter — getText/setText', () => {
     } finally {
       delete (document as Partial<Document>).execCommand;
     }
+  });
+});
+
+const GROK_COMPOSER =
+  '<div class="tiptap ProseMirror" contenteditable="true" translate="no">';
+
+describe('grok adapter — findInputElement', () => {
+  it('finds the Tiptap/ProseMirror composer', () => {
+    document.body.innerHTML = `${GROK_COMPOSER}<p></p></div>`;
+    const el = grokAdapter.findInputElement();
+    expect(el).not.toBeNull();
+    expect(el!.classList.contains('tiptap')).toBe(true);
+  });
+
+  it('prefers the Tiptap composer over a legacy textarea when both exist', () => {
+    document.body.innerHTML =
+      '<textarea aria-label="Ask Grok anything"></textarea>' +
+      `${GROK_COMPOSER}<p></p></div>`;
+    expect(grokAdapter.findInputElement()!.classList.contains('tiptap')).toBe(true);
+  });
+
+  it('falls back to the legacy textarea variant', () => {
+    document.body.innerHTML =
+      '<textarea aria-label="Ask Grok anything">draft</textarea>';
+    const el = grokAdapter.findInputElement();
+    expect(el).toBeInstanceOf(HTMLTextAreaElement);
+  });
+
+  it('returns null when no composer exists', () => {
+    expect(grokAdapter.findInputElement()).toBeNull();
+  });
+});
+
+describe('grok adapter — getText/setText on the Tiptap composer', () => {
+  it('reads the empty-placeholder state as empty text', () => {
+    document.body.innerHTML = `${GROK_COMPOSER}<p data-placeholder="What do you want to know?"><br></p></div>`;
+    const el = grokAdapter.findInputElement()!;
+    expect(grokAdapter.getText(el)).toBe('');
+  });
+
+  it('joins one paragraph per line', () => {
+    document.body.innerHTML = `${GROK_COMPOSER}<p>alpha</p><p>beta</p></div>`;
+    const el = grokAdapter.findInputElement()!;
+    expect(grokAdapter.getText(el)).toBe('alpha\nbeta');
+  });
+
+  it('setText replaces the text and dispatches a bubbling insertText InputEvent', () => {
+    document.body.innerHTML = `<div id="react-root">${GROK_COMPOSER}<p>old</p></div></div>`;
+    const el = grokAdapter.findInputElement()!;
+    const onInput = vi.fn();
+    document.getElementById('react-root')!.addEventListener('input', onInput);
+
+    grokAdapter.setText(el, 'sharper\nprompt');
+
+    expect(grokAdapter.getText(el)).toBe('sharper\nprompt');
+    expect(el.querySelectorAll('p')).toHaveLength(2);
+    expect(onInput).toHaveBeenCalledOnce();
+    const event = onInput.mock.calls[0]![0] as InputEvent;
+    expect(event.bubbles).toBe(true);
+    expect(event.inputType).toBe('insertText');
+    expect(event.target).toBe(el);
+  });
+
+  it('setText prefers execCommand("insertText") when available', () => {
+    document.body.innerHTML = `${GROK_COMPOSER}<p>old</p></div>`;
+    const el = grokAdapter.findInputElement()!;
+    const execCommand = vi.fn(() => true);
+    (document as Document & { execCommand: typeof execCommand }).execCommand =
+      execCommand;
+    try {
+      grokAdapter.setText(el, 'via execCommand');
+      expect(execCommand).toHaveBeenCalledWith('insertText', false, 'via execCommand');
+      expect(el.querySelector('p')!.textContent).toBe('old');
+    } finally {
+      delete (document as Partial<Document>).execCommand;
+    }
+  });
+});
+
+describe('grok adapter — setText on the legacy textarea', () => {
+  it('bypasses a React-style value override and fires bubbling input + change', () => {
+    document.body.innerHTML =
+      '<div id="react-root"><textarea aria-label="Ask Grok anything"></textarea></div>';
+    const el = grokAdapter.findInputElement() as HTMLTextAreaElement;
+    const root = document.getElementById('react-root')!;
+
+    const trackerSet = vi.fn();
+    const nativeGet = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )!.get!;
+    Object.defineProperty(el, 'value', {
+      configurable: true,
+      get: () => nativeGet.call(el) as string,
+      set: trackerSet,
+    });
+
+    const seen: string[] = [];
+    root.addEventListener('input', (e) =>
+      seen.push((e.target as HTMLTextAreaElement).value),
+    );
+    const onChange = vi.fn();
+    root.addEventListener('change', onChange);
+
+    grokAdapter.setText(el, 'improved prompt');
+
+    expect(trackerSet).not.toHaveBeenCalled();
+    expect(seen).toEqual(['improved prompt']);
+    expect(onChange).toHaveBeenCalledOnce();
   });
 });

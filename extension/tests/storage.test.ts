@@ -40,6 +40,7 @@ describe('site toggles', () => {
       chatgpt: true,
       claude: true,
       gemini: true,
+      grok: true,
     });
     expect(await isSiteEnabled('claude')).toBe(true);
   });
@@ -51,6 +52,7 @@ describe('site toggles', () => {
       chatgpt: true,
       claude: true,
       gemini: false,
+      grok: true,
     });
     expect(await isSiteEnabled('gemini')).toBe(false);
     expect(await isSiteEnabled('chatgpt')).toBe(true);
@@ -71,6 +73,7 @@ describe('site toggles', () => {
       chatgpt: true, // corrupt value ignored
       claude: true, // missing key defaults on
       gemini: false, // valid value respected
+      grok: true,
     });
   });
 

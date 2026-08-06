@@ -140,3 +140,44 @@ Google ships Gemini UI changes frequently)._
 - select-all + `document.execCommand('insertText')` also works (Quill
   handles the native beforeinput/input sequence), so the shared
   `sites/contenteditable.ts` implementation is used unchanged.
+
+## grok.com
+
+_Researched 2026-08-05 from selector lists maintained by third-party
+extensions/userscripts that track Grok's DOM (OneClickPrompts
+`buttons-clicking-grok.js` + selector defaults, nisc/grok-userscripts);
+re-verify live — xAI ships composer changes often._
+
+### Prompt input element
+
+- Grok is a **React/Next.js** app (Tailwind utility classes everywhere, no
+  stable ids). The current composer is a **Tiptap/ProseMirror
+  contenteditable**: `div.tiptap.ProseMirror[contenteditable="true"]`,
+  usually carrying `translate="no"`. It sits inside a `<form>` within a
+  `.query-bar` container.
+- Older builds used a plain `<textarea aria-label="Ask Grok anything">`
+  (classes `w-full text-fg-primary …` — pure Tailwind, not selector-safe).
+  Some A/B variants may still serve it, so the adapter keeps the textarea
+  as a fallback behind the Tiptap selector.
+- Selector strategy (in order):
+  1. `div.tiptap.ProseMirror[contenteditable="true"]` (current editor)
+  2. fallback `textarea[aria-label="Ask Grok anything"]` (legacy variant)
+- Content in the Tiptap editor: one `<p>` per line; empty state is a single
+  `<p>` with a placeholder attribute — same read logic as chatgpt/claude
+  (Tiptap is a ProseMirror wrapper, identical DOM conventions).
+- Send button: `button[type="submit"][aria-label="Submit"]` inside the
+  composer form — **never touched**; it enables itself off editor state.
+
+### Programmatic text changes
+
+- Tiptap path: same editor family as chatgpt/claude — direct
+  textContent/innerText writes update the DOM but not ProseMirror's
+  document (third-party scripts that write `innerText` have to fake an
+  extra trailing keystroke to force a resync). select-all +
+  `document.execCommand('insertText')` produces the native
+  beforeinput/input sequence Tiptap listens to; shared
+  `sites/contenteditable.ts` used unchanged.
+- Legacy textarea path: React value-tracker problem, same as chatgpt's
+  legacy textarea — write via the native prototype setter, then dispatch
+  bubbling `input`/`change`. Shared helper extracted to
+  `sites/textarea.ts`.

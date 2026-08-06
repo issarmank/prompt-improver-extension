@@ -6,8 +6,13 @@ export default defineManifest({
   version: '0.1.0',
   description: 'Improves your prompt before you send it to a web-based LLM chat interface.',
   permissions: ['storage'],
-  // Match patterns can't name a port, so these cover the dev backend on :8787.
-  host_permissions: ['http://localhost/*', 'http://127.0.0.1/*'],
+  // Match patterns can't name a port, so the localhost entries cover the dev
+  // backend on :8787.
+  host_permissions: [
+    'http://localhost/*',
+    'http://127.0.0.1/*',
+    'https://grok.com/*',
+  ],
   background: {
     service_worker: 'src/background/service-worker.ts',
     type: 'module',
@@ -18,6 +23,7 @@ export default defineManifest({
         'https://chatgpt.com/*',
         'https://claude.ai/*',
         'https://gemini.google.com/*',
+        'https://grok.com/*',
       ],
       js: ['src/content/index.ts'],
       run_at: 'document_idle',

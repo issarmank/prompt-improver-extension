@@ -6,6 +6,7 @@ import { isSiteEnabled } from '../lib/storage';
 import { chatgptAdapter } from './sites/chatgpt';
 import { claudeAdapter } from './sites/claude';
 import { geminiAdapter } from './sites/gemini';
+import { grokAdapter } from './sites/grok';
 import type { SiteAdapter } from './sites/types';
 import { createImproveButton } from './ui/improve-button';
 import { showToast, type ToastKind } from './ui/toast';
@@ -14,6 +15,7 @@ const ADAPTERS: Record<string, SiteAdapter> = {
   'chatgpt.com': chatgptAdapter,
   'claude.ai': claudeAdapter,
   'gemini.google.com': geminiAdapter,
+  'grok.com': grokAdapter,
 };
 
 function toastKindFor(kind: RewriteErrorKind): ToastKind {

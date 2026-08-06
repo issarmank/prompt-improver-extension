@@ -1,13 +1,18 @@
 // Wrappers around chrome.storage.sync for user settings (per-site toggles).
 
-export const SITE_IDS = ['chatgpt', 'claude', 'gemini'] as const;
+export const SITE_IDS = ['chatgpt', 'claude', 'gemini', 'grok'] as const;
 export type SiteId = (typeof SITE_IDS)[number];
 
 export type EnabledSites = Record<SiteId, boolean>;
 
 const ENABLED_SITES_KEY = 'enabledSites';
 
-const DEFAULTS: EnabledSites = { chatgpt: true, claude: true, gemini: true };
+const DEFAULTS: EnabledSites = {
+  chatgpt: true,
+  claude: true,
+  gemini: true,
+  grok: true,
+};
 
 /** Read the per-site toggles; missing or corrupt entries fall back to enabled. */
 export async function getEnabledSites(): Promise<EnabledSites> {
