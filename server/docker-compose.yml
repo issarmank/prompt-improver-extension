@@ -3,3 +3,20 @@ services:
     image: redis:7-alpine
     ports:
       - '6379:6379'
+
+  # The API in the same image CI ships. Run it against the local Redis with
+  # `docker compose up --build server`; plain `docker compose up -d redis`
+  # keeps the npm-run dev workflow unchanged.
+  server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    ports:
+      - '8787:8787'
+    environment:
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      - redis

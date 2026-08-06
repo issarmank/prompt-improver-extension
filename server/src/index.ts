@@ -4,10 +4,19 @@ import type { Redis } from 'ioredis';
 import { warmUpConnection } from './lib/llm.js';
 import { createRateLimiter } from './lib/rate-limiter.js';
 import { createRedisClient } from './lib/redis.js';
+import {
+  allowedOriginsFromEnv,
+  corsForExtension,
+} from './middleware/cors.js';
 import { createRewriteRouter } from './routes/rewrite.js';
 
-export function createApp(redis: Redis): express.Express {
+export function createApp(
+  redis: Redis,
+  allowedOrigins: string[] = allowedOriginsFromEnv(),
+): express.Express {
   const app = express();
+  // Before the JSON parser so preflights never touch the body.
+  app.use(corsForExtension(allowedOrigins));
   app.use(express.json({ limit: '64kb' }));
 
   app.get('/healthz', (_req, res) => {
