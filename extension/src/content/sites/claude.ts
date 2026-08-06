@@ -1,6 +1,7 @@
 // Site adapter for claude.ai. See NOTES.md ("claude.ai") for the DOM research.
 import { readParagraphText, setContentEditableText } from './contenteditable';
 import type { SiteAdapter } from './types';
+import { leftOfInput } from '../ui/positioning';
 
 const ARIA_SELECTOR =
   'div[aria-label="Write your prompt to Claude"][contenteditable="true"]';
@@ -8,6 +9,7 @@ const FALLBACK_SELECTOR = 'div.ProseMirror[contenteditable="true"]';
 
 export const claudeAdapter: SiteAdapter = {
   siteId: 'claude',
+  positionButton: leftOfInput(30, -26),
 
   findInputElement(): HTMLElement | null {
     const byLabel = document.querySelector<HTMLElement>(ARIA_SELECTOR);

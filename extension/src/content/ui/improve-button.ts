@@ -1,17 +1,21 @@
 // The floating "✨ Improve" button. Lives in an overlay on document.body so
 // the site's React tree can't remove it when it re-renders the composer.
+import type { PositionButton } from '../sites/types';
+import { leftOfInput } from './positioning';
 
 export type ImproveButton = {
   container: HTMLElement;
   setLoading(loading: boolean): void;
   onClick(handler: () => void): void;
-  /** Position the button just above the given input element's top-right corner. */
-  positionNear(input: HTMLElement): void;
+  /** Position the button using the given strategy, or the shared default if omitted. */
+  positionNear(input: HTMLElement, positionButton?: PositionButton): void;
   hide(): void;
 };
 
-const IDLE_LABEL = '✨ Improve';
+const IDLE_LABEL = '✨ Improve My Prompt';
 const LOADING_LABEL = '… Improving';
+
+const DEFAULT_POSITION: PositionButton = leftOfInput(60, 8);
 
 export function createImproveButton(): ImproveButton {
   const container = document.createElement('div');
@@ -55,11 +59,12 @@ export function createImproveButton(): ImproveButton {
         if (!loading) handler();
       });
     },
-    positionNear(input: HTMLElement) {
-      const rect = input.getBoundingClientRect();
+    positionNear(input: HTMLElement, positionButton: PositionButton = DEFAULT_POSITION) {
       container.style.display = 'block';
-      container.style.top = `${Math.max(rect.top - 34, 4)}px`;
-      container.style.left = `${Math.max(rect.right - 110, 4)}px`;
+      const { width, height } = container.getBoundingClientRect();
+      const { top, left } = positionButton(input, { width, height });
+      container.style.top = `${top}px`;
+      container.style.left = `${left}px`;
     },
     hide() {
       container.style.display = 'none';

@@ -2,11 +2,13 @@
 // research behind these selectors and event tricks.
 import { readParagraphText, setContentEditableText } from './contenteditable';
 import type { SiteAdapter } from './types';
+import { leftOfInput } from '../ui/positioning';
 
 const INPUT_SELECTOR = '#prompt-textarea';
 
 export const chatgptAdapter: SiteAdapter = {
   siteId: 'chatgpt',
+  positionButton: leftOfInput(60, 8),
 
   findInputElement(): HTMLElement | null {
     return document.querySelector<HTMLElement>(INPUT_SELECTOR);
