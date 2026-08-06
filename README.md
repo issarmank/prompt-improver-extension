@@ -17,6 +17,32 @@ npm test           # runs every workspace's tests
 npm run lint       # ESLint across the repo
 ```
 
+## Pointing the extension at a backend
+
+The extension talks to the `server/` backend, never to the LLM directly. Which
+backend a build targets is decided at build time by `VITE_BACKEND_URL`:
+
+```bash
+# extension/.env.production
+VITE_BACKEND_URL=https://your-backend-host
+```
+
+Unset, builds fall back to `http://localhost:8787` — the dev server from
+`server/docker-compose.yml` — so local work needs no configuration.
+
+One variable drives two things that must agree: the URL the service worker
+fetches, and the `host_permissions` entry in the generated manifest. MV3 only
+waives CORS for hosts declared in `host_permissions`, so a build whose backend
+is missing from that list fails at runtime with no useful error. `vite.config.ts`
+resolves the value once and feeds both, and `extension/tests/manifest.test.ts`
+pins the derivation.
+
+The server has a matching setting: `EXTENSION_ORIGIN`, a comma-separated CORS
+allowlist of `chrome-extension://<id>` origins (see `server/.env.example`). An
+unpacked extension's id comes from its install path and changes if the folder
+moves; publishing to the Web Store assigns a different, permanent one. Requests
+with no `Origin` header pass through, so `curl` works regardless.
+
 ## Loading the extension unpacked
 
 1. Run `npm run build` (output lands in `extension/dist/`)
