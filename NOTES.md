@@ -25,6 +25,45 @@ quirks, how each site reacts to programmatic text changes).
   `content/index.ts`. Positions are rounded to whole pixels; without that,
   subpixel rect changes make the button shimmer on every keystroke.
 
+## When the button must NOT show (all sites)
+
+_Added 2026-08-06 after the button was seen floating over claude.ai's settings
+screen while a chat was open behind it._
+
+Finding the composer is not enough to show the button — all five sites are
+SPAs that leave it in the DOM on screens where it isn't usable:
+
+- **Settings-as-a-modal** (chatgpt, claude, grok, deepseek). The chat stays
+  mounted and the selectors keep matching it; only an overlay sits on top, so
+  the button rendered above the modal at `z-index: 2147483646`.
+- **Settings-as-a-route with rich-text fields of its own** (claude
+  `/settings/*`). The claude adapter's fallback selector is
+  `div.ProseMirror[contenteditable="true"]` — deliberately broad, so it also
+  matches settings' own editors, and the button attaches to those.
+- **Composer left mounted but hidden** after a client-side route change.
+
+Two gates in front of `findInputElement()`, both re-evaluated on every
+reposition (`activeInput()` in `content/index.ts`):
+
+1. `ui/visibility.ts` → `isInputInteractive(input)`: element still connected,
+   no `[inert]`/`[aria-hidden="true"]` ancestor (Radix — chatgpt and claude —
+   marks the page behind an open modal this way, which is the most reliable
+   "behind an overlay" signal available), computed `display`/`visibility`
+   showing, a non-zero `visibleBox`, and no `[aria-modal="true"] , dialog[open]`
+   elsewhere in the document. A composer *inside* the open dialog still counts.
+2. `SiteAdapter.isSupportedPage?()` — optional per-site route gate. Only claude
+   needs one today (its broad fallback selector); the exact selectors on the
+   other sites (`#prompt-textarea`, `rich-textarea .ql-editor`, …) never match
+   outside a composer, so they rely on gate 1 alone.
+
+Repositioning triggers had to grow to notice these: the body `MutationObserver`
+now also watches the `aria-hidden`/`inert`/`open` attributes (a modal can hide
+the composer without touching its subtree), plus `popstate`, `hashchange`,
+`focusin`, and a 1s interval as a safety net for overlays that show themselves
+with a class swap. History `pushState` can't be hooked — the content script
+runs in an isolated world — but the tree the new route renders fires the
+observer anyway.
+
 ## chatgpt.com
 
 _Researched 2026-08-05 (from documented DOM structure; re-verify against the

@@ -160,6 +160,30 @@ describe('claude adapter — findInputElement', () => {
   });
 });
 
+describe('claude adapter — isSupportedPage', () => {
+  const at = (path: string) => {
+    history.replaceState(null, '', path);
+    return claudeAdapter.isSupportedPage!();
+  };
+
+  it('allows the chat routes', () => {
+    expect(at('/')).toBe(true);
+    expect(at('/new')).toBe(true);
+    expect(at('/chat/2f1c-4b')).toBe(true);
+    expect(at('/project/9a7d')).toBe(true);
+  });
+
+  it('blocks settings, where the page has rich-text fields of its own', () => {
+    expect(at('/settings/profile')).toBe(false);
+    expect(at('/settings')).toBe(false);
+    expect(at('/admin/members')).toBe(false);
+  });
+
+  it('does not block a chat whose id merely starts with a blocked word', () => {
+    expect(at('/chat/settings-for-my-app')).toBe(true);
+  });
+});
+
 describe('claude adapter — getText/setText', () => {
   it('reads the Tiptap empty-placeholder state as empty text', () => {
     document.body.innerHTML = `${CLAUDE_COMPOSER}<p data-placeholder="How can Claude help?" class="is-empty is-editor-empty"><br></p></div>`;

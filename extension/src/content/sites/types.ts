@@ -21,6 +21,13 @@ export interface SiteAdapter {
   siteId: string;
   /** Custom button placement for this site's DOM; omit to use the shared default. */
   positionButton?: PositionButton;
+  /**
+   * Route gate: false on sections of the site that aren't a chat page (e.g.
+   * a full-page settings screen). Re-evaluated on every reposition, so it must
+   * read the *current* location. Omit when every route on the host that has a
+   * matching input is a chat page.
+   */
+  isSupportedPage?(): boolean;
   /** Locate the prompt input element on the page, or null if not found. */
   findInputElement(): HTMLElement | null;
   /** Read the current prompt text from the input element. */
