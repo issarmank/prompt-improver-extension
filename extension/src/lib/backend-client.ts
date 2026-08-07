@@ -112,9 +112,13 @@ async function toBackendError(res: Response): Promise<BackendError> {
         'llm_not_configured',
         'The backend has no LLM API key configured',
       );
+    case 'llm_error':
+      return new BackendError('llm_error', 'The rewrite model returned an error');
     case 'invalid_body':
     case 'missing_install_id':
       return new BackendError('invalid_request', `Backend rejected the request (${code})`);
+    case 'internal_error':
+      return new BackendError('internal_error', 'The backend hit an internal error');
     default:
       return new BackendError(
         'server_error',

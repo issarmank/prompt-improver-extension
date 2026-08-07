@@ -123,6 +123,16 @@ describe('rewrite', () => {
     await expect(rewrite('x')).rejects.toMatchObject({ kind: 'llm_not_configured' });
   });
 
+  it('maps llm_error distinctly from the generic server_error fallback', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(502, { error: 'llm_error' }));
+    await expect(rewrite('x')).rejects.toMatchObject({ kind: 'llm_error' });
+  });
+
+  it('maps internal_error distinctly from the generic server_error fallback', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(500, { error: 'internal_error' }));
+    await expect(rewrite('x')).rejects.toMatchObject({ kind: 'internal_error' });
+  });
+
   it('maps a client-side timeout to timeout', async () => {
     fetchMock.mockRejectedValue(new DOMException('timed out', 'TimeoutError'));
     await expect(rewrite('x')).rejects.toMatchObject({ kind: 'timeout' });
