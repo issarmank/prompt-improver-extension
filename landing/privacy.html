@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Prompt Polish</title>
+<meta name="description" content="What Prompt Polish sends, stores, and never touches.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fbfaf9;color:#17161a;font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:oklch(0.52 0.19 295);text-decoration:none}
+a:hover{color:oklch(0.42 0.19 295)}
+h2{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.01em;margin:38px 0 10px}
+p,li{font-size:15px;line-height:1.65;color:#464350}
+ul{margin:8px 0;padding-left:20px}
+li{margin:4px 0}
+code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:#f0eeec;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<div style="max-width:720px;margin:0 auto;padding:0 clamp(18px,4vw,32px)">
+
+<nav style="display:flex;align-items:center;gap:9px;padding:26px 0 10px">
+  <a href="./" style="display:flex;align-items:center;gap:9px">
+    <div style="width:24px;height:24px;border-radius:7px;background:oklch(0.52 0.19 295);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px">✦</div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;letter-spacing:-0.01em;color:#17161a">Prompt Polish</span>
+  </a>
+</nav>
+
+<main style="padding:20px 0 60px">
+  <h1 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,4vw,38px);line-height:1.1;letter-spacing:-0.03em;font-weight:600;margin:10px 0 6px">Privacy Policy</h1>
+  <p style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#9b98a1;margin:0">Last updated August 7, 2026</p>
+
+  <p style="margin-top:24px">Prompt Polish is a Chrome extension with one job: when you click its button, it sends your draft prompt off to be rewritten, then puts the improved version back in the same box. You still hit send. This page explains exactly what data that involves.</p>
+
+  <h2>What gets sent off your device</h2>
+  <p>When you click "✨ Improve", the text currently in the chat box is sent over HTTPS to the Prompt Polish backend, which forwards it to <a href="https://openrouter.ai" target="_blank" rel="noopener">OpenRouter</a> to generate a rewritten version. That text is:</p>
+  <ul>
+    <li>sent only when you click the button — never automatically, never on every keystroke</li>
+    <li>used only to generate the rewrite — not read, logged, or stored by our backend once the response is returned</li>
+    <li>never sent anywhere except our backend and the model provider it routes the rewrite through</li>
+  </ul>
+
+  <h2>What we store</h2>
+  <ul>
+    <li><strong>An anonymous install ID</strong> — a random identifier generated on install and kept in <code>chrome.storage.local</code>. It's sent with each rewrite request so our backend can apply a per-install rate limit (via Redis). It isn't linked to your name, email, or account — we don't have accounts.</li>
+    <li><strong>Your site toggles</strong> — which supported sites Prompt Polish is active on, kept in <code>chrome.storage.sync</code> so the setting follows your Chrome profile. This is standard Chrome sync, handled by Google, not by us.</li>
+  </ul>
+  <p>Neither of these ever includes your prompt text.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>No accounts, no sign-in, no tracking across sites</li>
+    <li>No analytics, ads, or third-party trackers in the extension</li>
+    <li>No selling or sharing of data with anyone besides the rewrite request described above</li>
+    <li>No reading of your messages beyond the text you explicitly submit for improvement</li>
+    <li>No touching your site's own send button or event listeners — Prompt Polish only reads and replaces the text in the input field</li>
+  </ul>
+
+  <h2>Third parties involved</h2>
+  <p>Two services see prompt text in order to do the rewrite: our backend (hosted on Microsoft Azure) and <a href="https://openrouter.ai" target="_blank" rel="noopener">OpenRouter</a>, which routes the request to an underlying language model. Neither is used for advertising, and neither receives your install ID alongside your prompt text.</p>
+
+  <h2>Data retention</h2>
+  <p>Prompt text is processed in memory to produce a rewrite and is not written to a database or log. Install IDs and rate-limit counters live in Redis with a rolling expiry and are deleted automatically once the rate-limit window passes.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes in a way that matters — a new data destination, a new thing we store — this page will be updated and the "last updated" date above will change.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy or how Prompt Polish handles data: open an issue on <a href="https://github.com/issarmank/prompt-improver-extension" target="_blank" rel="noopener">GitHub</a>.</p>
+</main>
+
+<footer style="padding:24px 0 44px;border-top:1px solid rgba(0,0,0,.08)">
+  <a href="./" style="font-size:13.5px;color:#6b6870">← Back to Prompt Polish</a>
+</footer>
+
+</div>
+</body>
+</html>
