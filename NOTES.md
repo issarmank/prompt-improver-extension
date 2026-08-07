@@ -97,6 +97,13 @@ next to (`styleSourceFor` in `content/ui/mount.ts`). Border and hover fill are
 themes work with no per-site CSS. No shadow DOM — it would cut off exactly the
 inheritance this relies on.
 
+The host element sets `align-self: center` on itself rather than trusting the
+row. Grok's trailing group is bottom-aligned against its tall voice-mode
+circle, so with `align-self` unset the pill rendered ~12px lower than the "Fast"
+picker and the mic beside it. Centring our own node covers `items-end`,
+`items-start` and `items-baseline` rows alike, and is a no-op on the rows that
+already centre (chatgpt, claude, gemini, deepseek).
+
 ### Staying mounted
 
 React tolerates the foreign child better than expected: on claude.ai an

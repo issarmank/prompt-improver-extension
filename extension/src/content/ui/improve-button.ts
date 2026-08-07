@@ -32,6 +32,7 @@ export function createImproveButton(): ImproveButton {
   Object.assign(container.style, {
     display: 'inline-flex',
     alignItems: 'center',
+    alignSelf: 'center',
     flex: 'none',
     margin: '0 4px',
   } satisfies Partial<CSSStyleDeclaration>);
