@@ -14,6 +14,8 @@ const ERROR_MESSAGES: Record<RewriteErrorKind, string> = {
   llm_not_configured: 'The Prompt Polish backend has no API key configured.',
   llm_error: 'The rewrite model returned an error — try again.',
   invalid_request: 'The prompt was empty or too long to rewrite.',
+  forbidden_origin:
+    'The backend does not recognize this install of the extension — its id must be added to the backend allowlist.',
   internal_error: 'Something went wrong on our end — try again.',
   network: 'Could not reach the Prompt Polish backend — is it running?',
   timeout: 'The backend took too long to respond — try again.',

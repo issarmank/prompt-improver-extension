@@ -5,7 +5,10 @@ import type { RewriteErrorKind } from './messaging';
 // Falls back to the docker-compose dev server so `npm run dev` needs no setup.
 export const DEFAULT_BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8787';
-export const REWRITE_TIMEOUT_MS = 8000;
+// Must cover the server's own LLM budget (LLM_TIMEOUT_MS, 20s in production)
+// plus a Container Apps cold start (~8s observed when scaled to zero) — an 8s
+// client timeout was aborting requests the backend would have completed.
+export const REWRITE_TIMEOUT_MS = 30000;
 
 const INSTALL_ID_KEY = 'installId';
 
@@ -117,6 +120,11 @@ async function toBackendError(res: Response): Promise<BackendError> {
     case 'invalid_body':
     case 'missing_install_id':
       return new BackendError('invalid_request', `Backend rejected the request (${code})`);
+    case 'forbidden_origin':
+      return new BackendError(
+        'forbidden_origin',
+        "This extension id is not on the backend's allowlist",
+      );
     case 'internal_error':
       return new BackendError('internal_error', 'The backend hit an internal error');
     default:

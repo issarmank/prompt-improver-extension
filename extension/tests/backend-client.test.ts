@@ -133,6 +133,11 @@ describe('rewrite', () => {
     await expect(rewrite('x')).rejects.toMatchObject({ kind: 'internal_error' });
   });
 
+  it('maps forbidden_origin distinctly so a CORS misconfig is diagnosable', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(403, { error: 'forbidden_origin' }));
+    await expect(rewrite('x')).rejects.toMatchObject({ kind: 'forbidden_origin' });
+  });
+
   it('maps a client-side timeout to timeout', async () => {
     fetchMock.mockRejectedValue(new DOMException('timed out', 'TimeoutError'));
     await expect(rewrite('x')).rejects.toMatchObject({ kind: 'timeout' });

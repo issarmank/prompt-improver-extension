@@ -13,6 +13,7 @@ export type RewriteErrorKind =
   | 'llm_not_configured' // backend has no API key (503)
   | 'llm_error' // the LLM provider returned a non-timeout, non-rate-limit failure (502)
   | 'invalid_request' // backend rejected the prompt or install id (400)
+  | 'forbidden_origin' // this extension id is not on the backend's CORS allowlist (403)
   | 'internal_error' // backend hit a bug or a dependency (e.g. Redis) failed (500)
   | 'network' // couldn't reach the backend at all
   | 'timeout' // backend didn't respond within the client timeout
