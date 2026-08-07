@@ -28,6 +28,12 @@ export default function buildManifest(backendUrl: string): Manifest {
     version: '0.1.0',
     description:
       'Improves your prompt before you send it to a web-based LLM chat interface.',
+    icons: {
+      16: 'src/assets/icons/icon-16.png',
+      32: 'src/assets/icons/icon-32.png',
+      48: 'src/assets/icons/icon-48.png',
+      128: 'src/assets/icons/icon-128.png',
+    },
     permissions: ['storage'],
     host_permissions: [
       ...backendHostPermissions(backendUrl),
