@@ -118,6 +118,37 @@ function mountDeepseek(): void {
 }
 
 /**
+ * deepseek, current build: the hidden file input sits *directly* in the action
+ * row rather than in a wrapper around the attach control, so a docked Improve
+ * button is the first `button` in the file input's parent.
+ */
+function mountDeepseekFlat(): void {
+  document.body.innerHTML = `
+    <div class="composer">
+      <div class="input-wrap"><textarea placeholder="Message DeepSeek"></textarea></div>
+      <div class="footer" style="${ROW}">
+        <div class="left" style="${ROW}">
+          <div role="button">DeepThink</div>
+          <div role="button">Search</div>
+        </div>
+        <div class="right" id="deepseek-flat-row" style="${ROW}">
+          <div role="button" id="attach"></div>
+          <input type="file" />
+          <div role="button" id="send"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/** A host shaped like the real one: marked data-prompt-polish, holds a <button>. */
+function polishHost(): HTMLElement {
+  const host = document.createElement('div');
+  host.setAttribute('data-prompt-polish', '');
+  host.appendChild(document.createElement('button'));
+  return host;
+}
+
+/**
  * The site control the button ends up sitting immediately to the left of.
  * Asserting on this rather than on the container is what actually pins the
  * placement down: which nesting level the row resolves to is an implementation
@@ -193,6 +224,28 @@ describe("findButtonSlot — the button docks in the site's own action row", () 
     expect(controlAfter(dock(deepseekAdapter))!.id).toBe('attach');
   });
 
+  it('deepseek: docks left of the attach button when the file input sits in the row itself', () => {
+    mountDeepseekFlat();
+    expect(controlAfter(dock(deepseekAdapter))!.id).toBe('attach');
+  });
+
+  it('deepseek: a docked button is never its own landmark, so the slot stays stable', () => {
+    // Regression: once docked, the button was the first `button` in the file
+    // input's group, resolved as the "attach" landmark, and the slot demanded
+    // an insert-before-itself — endless remount loop, unclickable button.
+    mountDeepseekFlat();
+    const input = deepseekAdapter.findInputElement()!;
+    const host = polishHost();
+    expect(applySlot(host, deepseekAdapter.findButtonSlot(input)!)).toBe(true);
+    const again = deepseekAdapter.findButtonSlot(input)!;
+    expect(again.before).not.toBe(host);
+    // The re-resolved slot matches where the host already is: zero DOM churn.
+    expect(applySlot(host, again)).toBe(false);
+    // controlAfter() would see the host's own inner <button> here; the direct
+    // sibling is the placement that matters.
+    expect(host.nextElementSibling!.id).toBe('attach');
+  });
+
   it('returns null when the composer has no recognisable action row', () => {
     document.body.innerHTML =
       '<div class="composer"><div id="prompt-textarea" contenteditable="true"><p></p></div></div>';
@@ -241,6 +294,15 @@ describe('applySlot', () => {
     expect(host.isConnected).toBe(false);
     expect(applySlot(host, claudeSlot())).toBe(true);
     expect(host.nextElementSibling!.id).toBe('claude-model-group');
+  });
+
+  it('treats a slot pointing at the host itself as already in place', () => {
+    // Inserting a node before itself is positionally a no-op but still fires
+    // mutation records — returning true here would re-arm the mount loop
+    // every frame. The host's current spot must count as correct.
+    const { host, slot } = slotFor();
+    applySlot(host, slot);
+    expect(applySlot(host, { container: host.parentElement!, before: host })).toBe(false);
   });
 
   it('appends when the landmark has already left the row', () => {

@@ -21,8 +21,14 @@ export function findInComposer(
 ): HTMLElement | null {
   let scope = input.parentElement;
   for (let i = 0; i < maxDepth && scope && scope !== document.body; i += 1) {
-    const hit = scope.querySelector<HTMLElement>(selector);
-    if (hit && hit !== input && !hit.contains(input)) return hit;
+    for (const hit of scope.querySelectorAll<HTMLElement>(selector)) {
+      // Our own UI must never be a landmark: once the button is docked it
+      // precedes the site's controls in document order, so a naive first-match
+      // would resolve to it and the slot would ask us to insert the host
+      // before itself — an endless remount loop (seen live on deepseek).
+      if (hit.closest('[data-prompt-polish]')) continue;
+      if (hit !== input && !hit.contains(input)) return hit;
+    }
     scope = scope.parentElement;
   }
   return null;

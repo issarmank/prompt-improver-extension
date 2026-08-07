@@ -23,7 +23,15 @@ export function styleSourceFor(slot: ButtonSlot): Element | null {
  */
 export function applySlot(host: HTMLElement, slot: ButtonSlot): boolean {
   // A stale `before` from a half-replaced row would throw in insertBefore.
-  const before = slot.before?.parentElement === slot.container ? slot.before : null;
+  let before = slot.before?.parentElement === slot.container ? slot.before : null;
+  // A slot pointing at the host itself means an adapter resolved our own UI
+  // as its landmark. Inserting a node before itself moves nothing but still
+  // fires mutation records, which would re-arm the mount loop every frame —
+  // treat the host's current spot as already correct instead.
+  if (before && (before === host || host.contains(before))) {
+    if (host.parentElement === slot.container) return false;
+    before = null;
+  }
   if (host.parentElement === slot.container && host.nextElementSibling === before) return false;
   slot.container.insertBefore(host, before);
   return true;

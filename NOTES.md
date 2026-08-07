@@ -70,6 +70,18 @@ Per-site notes:
   identified by the hidden `input[type="file"]` next to it in the same group.
   Its `textarea` also has **no id** in the current build, so the adapter's
   `textarea#chat-input` selector is dead and the placeholder fallback carries it.
+  - **The file input now sits directly in the action row** (seen live
+    2026-08-07: row children are `[attach ds-button, input[type=file], send]`),
+    so once our button is docked it is the first `button` in the file input's
+    parent. A first-match control query then resolves *our own button* as the
+    attach landmark → slot.before becomes our own host → `insertBefore(host,
+    host)` every frame. That moves nothing but fires mutation records, so the
+    mount loop re-armed itself ~70×/s; a node re-inserted every frame keeps its
+    hover tint (mouseleave is lost) and never completes a click (mousedown and
+    mouseup straddle a re-insert). Symptom reported as "hover sticks and the
+    button won't click". Landmark queries must always skip
+    `[data-prompt-polish]`, and `applySlot` treats a slot pointing at the host
+    itself as already in place.
 - **grok** exposes `aria-label="Model select"` on the pill (text "Fast").
 - **gemini's mode picker is optional.** The trailing row is
   `div.trailing-actions-wrapper.with-model-picker`, and some builds/entry points

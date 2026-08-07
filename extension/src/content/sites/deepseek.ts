@@ -21,10 +21,19 @@ const ATTACH_GROUP = 'input[type="file"]';
 /** Last resort if the file input moves out of the group: aim at the send button. */
 const FALLBACK_LANDMARKS = ['div[role="button"]:last-of-type'];
 
-/** The attach control: the first real control in the group holding the file input. */
+/**
+ * The attach control: the first real control in the group holding the file
+ * input. Current builds put the file input directly in the action row, so once
+ * our button is docked it is the first `button` in that group — skip anything
+ * of ours or the slot resolves to our own node and remounts forever.
+ */
 function findAttachButton(input: HTMLElement): HTMLElement | null {
   const file = findInComposer(input, ATTACH_GROUP);
-  return file?.parentElement?.querySelector<HTMLElement>('button, [role="button"]') ?? null;
+  if (!file?.parentElement) return null;
+  for (const el of file.parentElement.querySelectorAll<HTMLElement>('button, [role="button"]')) {
+    if (!el.closest('[data-prompt-polish]')) return el;
+  }
+  return null;
 }
 
 export const deepseekAdapter: SiteAdapter = {
