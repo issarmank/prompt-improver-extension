@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prompt Polish — a better prompt, one click away</title>
+<script>
+  var CHROME_LINK = "https://chromewebstore.google.com/detail/prompt-polish/mibigpkhjlncbadmdjailpelabdpfhgk";
+</script>
 <meta name="description" content="A Chrome extension that sits next to your chat box on ChatGPT, Claude and Gemini. Type your usual half-thought, hit one button, and it comes back specific. You still hit send.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,7 +72,7 @@ section:first-of-type>div:nth-child(2){animation-delay:.14s}
   <a href="#demo" style="font-size:14px;color:#5c5962">Demo</a>
   <a href="#sites" style="font-size:14px;color:#5c5962">Supported sites</a>
   <a href="#faq" style="font-size:14px;color:#5c5962">FAQ</a>
-  <a href="#cta" style="font-size:14px;font-weight:500;padding:9px 16px;border-radius:999px;background:#1c1b1f;color:#fff" style-hover="background:#000">Add to Chrome</a>
+  <a class="chrome-link" href="#" style="font-size:14px;font-weight:500;padding:9px 16px;border-radius:999px;background:#1c1b1f;color:#fff" style-hover="background:#000">Add to Chrome</a>
 </nav>
 
 <section style="display:flex;gap:clamp(24px,5vw,56px);flex-wrap:wrap;align-items:center;padding:clamp(28px,6vw,64px) 0 clamp(40px,7vw,80px)">
@@ -85,7 +88,7 @@ section:first-of-type>div:nth-child(2){animation-delay:.14s}
       Prompt Polish sits quietly next to your chat box on your favourite LLM. Type your usual half-thought, hit one button, and it comes back specific. You still hit send.
     </p>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <a href="#cta" style="display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free</a>
+      <a class="chrome-link" href="#" style="display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free</a>
       <a href="#demo" style="font-size:14.5px;color:#5c5962;padding:13px 4px" style-hover="color:#17161a">See it in action →</a>
     </div>
     <p style="font-size:12.5px;color:#8b8891;margin:18px 0 0;font-family:'IBM Plex Mono',monospace">Manifest V3 · no account · never auto-sends</p>
@@ -239,7 +242,7 @@ section:first-of-type>div:nth-child(2){animation-delay:.14s}
     <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3.8vw,42px);line-height:1.08;letter-spacing:-0.03em;font-weight:600;margin:0 0 14px;text-wrap:balance">One button. Roughly a thousand better answers.</h2>
     <p style="font-size:15.5px;line-height:1.6;color:#464350;margin:0 0 28px">Free while Prompt Polish is in beta. Install takes about eight seconds, most of which is Chrome asking if you're sure.</p>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <a href="#cta" style="position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:9px;padding:14px 24px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free
+      <a class="chrome-link" href="#" style="position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:9px;padding:14px 24px;border-radius:999px;background:#1c1b1f;color:#fff;font-size:15px;font-weight:500" style-hover="background:#000">✦ Add to Chrome — free
         <span style="position:absolute;top:0;bottom:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:pp-sheen 3.4s ease-in-out infinite"></span>
       </a>
       <span style="font-size:13px;color:#5c5962;font-family:'IBM Plex Mono',monospace">Chrome 114+ · 68 KB</span>
@@ -335,6 +338,12 @@ section:first-of-type>div:nth-child(2){animation-delay:.14s}
   }, { passive: true });
   spy();
 })();
+</script>
+
+<script>
+  document.querySelectorAll('.chrome-link').forEach(function (a) {
+    a.href = CHROME_LINK;
+  });
 </script>
 
 </body>
