@@ -9,6 +9,10 @@ web-based LLM chat interface (ChatGPT, Claude, Gemini, Grok, DeepSeek).
 
 - `extension/` — the Chrome extension (TypeScript, Vite + @crxjs/vite-plugin, Vitest)
 - `server/` — the backend that proxies rewrite requests to the LLM API (TypeScript, Express)
+- `landing/` — the static landing page and privacy policy, no build step. Hosted on
+  Vercel via its Git integration: the project's Root Directory is `landing`, and
+  every push to `main` that touches the folder deploys to production (PRs get
+  preview URLs).
 
 ## Development
 
