@@ -1,6 +1,5 @@
 // Redis client construction: REDIS_TLS=true must turn on TLS for redis:// URLs
-// (managed Redis like Azure Cache requires TLS on :6380 but is still usually
-// configured with a redis:// URL).
+// (some managed Redis hosts require TLS but still hand out a redis:// URL).
 import type { Redis } from 'ioredis';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createRedisClient } from '../src/lib/redis.js';
@@ -27,6 +26,12 @@ describe('createRedisClient', () => {
     process.env.REDIS_TLS = 'true';
     client = createRedisClient();
     expect(client.options.tls).toBeDefined();
+  });
+
+  it('connects lazily so importing the app opens no socket', () => {
+    client = createRedisClient();
+    expect(client.options.lazyConnect).toBe(true);
+    expect(client.status).toBe('wait');
   });
 
   it('treats anything other than "true" as off', () => {

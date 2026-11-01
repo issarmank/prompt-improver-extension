@@ -27,10 +27,13 @@ export function createApp(
   return app;
 }
 
+// Vercel runs the default export as a function; `npm start` listens below.
+const app = createApp(createRedisClient());
+export default app;
+
 const isDirectRun = process.argv[1]?.endsWith('index.js');
 if (isDirectRun) {
   const port = Number(process.env.PORT ?? 8787);
-  const app = createApp(createRedisClient());
   void warmUpConnection();
   app.listen(port, () => {
     console.log(`prompt-polish server listening on http://localhost:${port}`);
