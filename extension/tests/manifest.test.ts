@@ -19,10 +19,8 @@ describe('backendHostPermissions', () => {
 
   it('drops the port from a production origin — match patterns reject it', () => {
     expect(
-      backendHostPermissions(
-        'https://prompt-polish-server.eastus.azurecontainerapps.io',
-      ),
-    ).toEqual(['https://prompt-polish-server.eastus.azurecontainerapps.io/*']);
+      backendHostPermissions('https://prompt-polish-server.vercel.app:443'),
+    ).toEqual(['https://prompt-polish-server.vercel.app/*']);
   });
 
   it('ignores any path on the configured URL', () => {

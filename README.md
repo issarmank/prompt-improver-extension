@@ -8,7 +8,12 @@ web-based LLM chat interface (ChatGPT, Claude, Gemini, Grok, DeepSeek).
 ## Repository layout
 
 - `extension/` — the Chrome extension (TypeScript, Vite + @crxjs/vite-plugin, Vitest)
-- `server/` — the backend that proxies rewrite requests to the LLM API (TypeScript, Express)
+- `server/` — the backend that proxies rewrite requests to the LLM API (TypeScript, Express).
+  Hosted on Vercel as an Express function (project `prompt-polish-server`, Root
+  Directory `server`, region `iad1`), with Upstash Redis for the rate limiter.
+  Production config (`OPENROUTER_API_KEY`, `REDIS_URL`, `EXTENSION_ORIGIN`, …) lives
+  in the project's Vercel environment variables. Pushes to `main` that touch the
+  server deploy automatically; `.github/workflows/test-server.yml` runs its tests.
 - `landing/` — the static landing page and privacy policy, no build step. Hosted on
   Vercel via its Git integration: the project's Root Directory is `landing`, and
   every push to `main` that touches the folder deploys to production (PRs get

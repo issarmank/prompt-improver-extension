@@ -25,7 +25,7 @@ export default function buildManifest(backendUrl: string): Manifest {
   return {
     manifest_version: 3,
     name: 'Prompt Polish',
-    version: '0.1.0',
+    version: '0.1.1',
     description:
       'Improves your prompt before you send it to a web-based LLM chat interface.',
     icons: {

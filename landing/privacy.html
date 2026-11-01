@@ -33,7 +33,7 @@ code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:#f0eeec;pad
 
 <main style="padding:20px 0 60px">
   <h1 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,4vw,38px);line-height:1.1;letter-spacing:-0.03em;font-weight:600;margin:10px 0 6px">Privacy Policy</h1>
-  <p style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#9b98a1;margin:0">Last updated August 7, 2026</p>
+  <p style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#9b98a1;margin:0">Last updated November 1, 2026</p>
 
   <p style="margin-top:24px">Prompt Polish is a Chrome extension with one job: when you click its button, it sends your draft prompt off to be rewritten, then puts the improved version back in the same box. You still hit send. This page explains exactly what data that involves.</p>
 
@@ -62,10 +62,10 @@ code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:#f0eeec;pad
   </ul>
 
   <h2>Third parties involved</h2>
-  <p>Two services see prompt text in order to do the rewrite: our backend (hosted on Microsoft Azure) and <a href="https://openrouter.ai" target="_blank" rel="noopener">OpenRouter</a>, which routes the request to an underlying language model. Neither is used for advertising, and neither receives your install ID alongside your prompt text.</p>
+  <p>Two services see prompt text in order to do the rewrite: our backend (hosted on Vercel) and <a href="https://openrouter.ai" target="_blank" rel="noopener">OpenRouter</a>, which routes the request to an underlying language model. Neither is used for advertising, and neither receives your install ID alongside your prompt text.</p>
 
   <h2>Data retention</h2>
-  <p>Prompt text is processed in memory to produce a rewrite and is not written to a database or log. Install IDs and rate-limit counters live in Redis with a rolling expiry and are deleted automatically once the rate-limit window passes.</p>
+  <p>Prompt text is processed in memory to produce a rewrite and is not written to a database or log. Install IDs and rate-limit counters (never prompt text) live in Redis hosted by <a href="https://upstash.com" target="_blank" rel="noopener">Upstash</a>, with a rolling expiry, and are deleted automatically once the rate-limit window passes.</p>
 
   <h2>Changes</h2>
   <p>If this policy changes in a way that matters — a new data destination, a new thing we store — this page will be updated and the "last updated" date above will change.</p>
